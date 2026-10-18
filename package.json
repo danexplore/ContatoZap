@@ -1,0 +1,39 @@
+{
+  "name": "extrator-whatsapp",
+  "version": "1.0.0",
+  "description": "Extrator de contatos e participantes de grupos do WhatsApp com interface Web visual, modo CLI e persistência de sessão em SQLite.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "gui": "node server.js",
+    "cli": "node extrator-seletor.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "whatsapp-web",
+    "extractor",
+    "extrator",
+    "contatos",
+    "grupos",
+    "groups",
+    "scraper",
+    "pushname",
+    "gui",
+    "cli"
+  ],
+  "author": "danexplore",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danexplore/extrator.git"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  }
+}

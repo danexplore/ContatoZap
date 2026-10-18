@@ -1,0 +1,1756 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extrator de Grupos do WhatsApp</title>
+<style>
+  :root {
+    --bg-page: #f0f2f5;
+    --surface: #ffffff;
+    --surface-alt: #f8f9fa;
+    --surface-hover: #f1f3f5;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
+    --accent: #00a884;
+    --accent-hover: #028e70;
+    --accent-light: #e6f7f3;
+    --accent-text: #ffffff;
+    --danger: #ef4444;
+    --danger-bg: #fef2f2;
+    --warning: #f59e0b;
+    --warning-bg: #fffbeb;
+    --info-bg: #eff6ff;
+    --info-text: #1d4ed8;
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --transition: 0.18s ease;
+  }
+
+  [data-theme="dark"] {
+    --bg-page: #0c1317;
+    --surface: #111b21;
+    --surface-alt: #16242c;
+    --surface-hover: #202c33;
+    --border: #222e35;
+    --border-strong: #2a3942;
+    --text-primary: #e9edef;
+    --text-secondary: #aebac1;
+    --text-muted: #8696a0;
+    --accent: #00a884;
+    --accent-hover: #02b68f;
+    --accent-light: #0d332b;
+    --accent-text: #ffffff;
+    --danger: #f87171;
+    --danger-bg: #2b1717;
+    --warning: #fbbf24;
+    --warning-bg: #2d230d;
+    --info-bg: #0c2338;
+    --info-text: #60a5fa;
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.35);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- App Header ---------- */
+  header.app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    box-shadow: var(--shadow-sm);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 28px; height: 28px; fill: var(--accent); flex-shrink: 0; }
+  .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary); }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-muted);
+  }
+  .pill.ok { background: var(--accent-light); border-color: transparent; color: var(--accent); }
+  .pill.err { background: var(--danger-bg); border-color: transparent; color: var(--danger); }
+  .pill.loading { background: var(--warning-bg); border-color: transparent; color: var(--warning); }
+  .pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
+  .btn:active:not(:disabled) { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn.danger { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+  .btn.icon-only { padding: 7px; border-radius: 8px; }
+
+  /* ---------- Layout Grid ---------- */
+  .app-wrap {
+    flex: 1;
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  /* ---------- Status / Connection Card ---------- */
+  .status-hero {
+    max-width: 480px;
+    margin: 40px auto;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .spinner {
+    width: 38px;
+    height: 38px;
+    margin: 12px auto;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #qr {
+    width: 280px;
+    height: 280px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    padding: 8px;
+    margin: 16px auto;
+    display: block;
+    box-shadow: var(--shadow-md);
+  }
+
+  .error-box {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin: 16px 0;
+    font-size: 13px;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* ---------- Sidebar (Grupos) ---------- */
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sidebar-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-title-row h2 { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+
+  .search-input-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .search-input-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    fill: var(--text-muted);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    padding: 8px 10px 8px 34px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: var(--transition);
+  }
+  .search-input:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 2px var(--accent-light); }
+
+  .selection-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 2px;
+  }
+  .selection-controls a {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .selection-controls a:hover { text-decoration: underline; }
+
+  /* Group Items List */
+  .group-list {
+    list-style: none;
+    max-height: calc(100vh - 280px);
+    min-height: 280px;
+    overflow-y: auto;
+    padding: 6px;
+  }
+  .group-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+    /* Guidance: content-visibility on list rows for massive lists */
+    content-visibility: auto;
+    contain-intrinsic-size: auto none auto 44px;
+  }
+  .group-item:hover { background: var(--surface-hover); }
+  .group-item.active {
+    background: var(--accent-light);
+    border-color: rgba(0, 168, 132, 0.25);
+  }
+  .group-item.active .group-name { color: var(--accent); font-weight: 600; }
+
+  .group-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .group-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .group-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .group-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .badge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Batch sticky bar at bottom of sidebar */
+  .batch-sidebar-bar {
+    padding: 12px 16px;
+    background: var(--surface-alt);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  /* ---------- Main Area / Detail View ---------- */
+  .detail-card {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 480px;
+  }
+
+  .detail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 380px;
+    color: var(--text-muted);
+    gap: 12px;
+  }
+  .detail-empty svg { width: 52px; height: 52px; fill: var(--border-strong); }
+
+  .detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-title-group h2 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Metrics Cards */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .metric-card {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: var(--transition);
+  }
+  .metric-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.04em; }
+  .metric-value { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+
+  /* Toolbar: Search + Filter Tabs + Pagination */
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-tabs {
+    display: inline-flex;
+    background: var(--surface-alt);
+    padding: 3px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    gap: 2px;
+  }
+  .filter-tab {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .filter-tab:hover { color: var(--text-primary); }
+  .filter-tab.active { background: var(--surface); color: var(--text-primary); font-weight: 600; box-shadow: var(--shadow-sm); }
+
+  .table-search-wrap {
+    flex: 1;
+    max-width: 260px;
+    min-width: 180px;
+  }
+
+  /* Guidance: Responsive Table container */
+  .table-wrapper {
+    overflow: auto;
+    max-inline-size: 100%;
+    max-block-size: 520px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    container-type: inline-size;
+    position: relative;
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+
+  /* Guidance: Sticky column headers */
+  thead {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+  }
+
+  th {
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    user-select: none;
+  }
+  th.sortable { cursor: pointer; }
+  th.sortable:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sort-icon { display: inline-block; margin-left: 4px; font-size: 10px; opacity: 0.6; }
+
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    white-space: nowrap;
+    /* Guidance: content-visibility for heavy tables */
+    content-visibility: auto;
+    contain-intrinsic-size: auto none auto 42px;
+  }
+  tr:last-child td { border-bottom: 0; }
+  tr:hover td { background: var(--surface-hover); }
+
+  .phone-cell {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .copy-icon-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: var(--transition);
+  }
+  tr:hover .copy-icon-btn { opacity: 1; }
+  .copy-icon-btn:hover { color: var(--accent); background: var(--accent-light); }
+
+  .tag-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .tag-badge.admin { background: #dcfce7; color: #15803d; }
+  .tag-badge.member { background: var(--surface-alt); color: var(--text-muted); }
+  .tag-badge.lid { background: var(--warning-bg); color: #b45309; }
+  [data-theme="dark"] .tag-badge.admin { background: #064e3b; color: #6ee7b7; }
+  [data-theme="dark"] .tag-badge.lid { background: #451a03; color: #fcd34d; }
+
+  /* Table Pagination Footer */
+  .table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-select {
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  /* Skeleton Loading */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-alt) 25%, var(--surface-hover) 50%, var(--surface-alt) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ---------- Batch Floating Drawer ---------- */
+  .batch-drawer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .batch-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .batch-title { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+
+  .progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-alt);
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #25d366);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .batch-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* ---------- Toast Notification ---------- */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-md);
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+    animation: toastIn 0.2s ease;
+  }
+  @keyframes toastIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .toast.success { border-left: 4px solid var(--accent); }
+  .toast.error { border-left: 4px solid var(--danger); }
+  .toast.info { border-left: 4px solid #3b82f6; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <div class="brand">
+    <svg viewBox="0 0 24 24">
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c4.56 0 8.25 3.69 8.25 8.24 0 2.2-.86 4.28-2.42 5.84-1.56 1.56-3.64 2.42-5.84 2.42-1.47 0-2.91-.4-4.17-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.25-4.4c0-4.55 3.7-8.24 8.26-8.24m-3.62 4.19c-.2-.01-.43.08-.57.22-.38.38-.98 1.15-.98 2.34 0 1.39.94 2.85 1.11 3.04.16.2 1.83 2.87 4.5 3.93 2.21.88 2.66.71 3.14.66.48-.05 1.55-.64 1.77-1.25.22-.61.22-1.14.16-1.25-.06-.11-.23-.17-.48-.29-.25-.12-1.5-.74-1.73-.83-.23-.08-.39-.12-.56.12-.17.25-.66.83-.81.99-.15.17-.31.19-.56.06-.25-.12-1.07-.4-2.04-1.26-.76-.68-1.27-1.52-1.42-1.77-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.43.12-.15.17-.25.25-.42.08-.17.04-.32-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.5-.4-.43-.58-.44"/>
+    </svg>
+    <h1>Extrator de Grupos do WhatsApp</h1>
+  </div>
+  <div class="header-actions">
+    <div id="statusPill" class="pill loading">
+      <span class="pill-dot"></span>
+      <span id="statusPillText">Conectando...</span>
+    </div>
+    <button class="btn icon-only" id="themeToggleBtn" title="Alternar tema claro/escuro">
+      <span id="themeIcon">🌙</span>
+    </button>
+    <button class="btn sm" id="restartBtn" title="Reiniciar cliente WhatsApp">Reiniciar</button>
+  </div>
+</header>
+
+<div class="app-wrap">
+  <!-- Connection / QR Card -->
+  <section id="statusCard" class="card status-hero">
+    <div id="spinner" class="spinner"></div>
+    <img id="qr" alt="QR Code do WhatsApp" hidden>
+    <p id="statusMsg" class="detail-meta" style="justify-content:center; margin-top:12px;"></p>
+    <div id="errorBox" class="error-box" hidden></div>
+    <div style="display:flex; gap:8px; justify-content:center; margin-top:16px;">
+      <button class="btn primary" id="retryBtn" hidden>Tentar Novamente</button>
+      <button class="btn" id="restartHeroBtn">Reiniciar Conexão</button>
+    </div>
+  </section>
+
+  <!-- Main View -->
+  <div id="mainView" class="grid" hidden>
+    <!-- Left Column: Groups List -->
+    <aside class="card">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <h2>Seus Grupos (<span id="totalGroupsCount">0</span>)</h2>
+          <button class="btn sm" id="refreshGroupsBtn" title="Recarregar grupos do WhatsApp">Atualizar</button>
+        </div>
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input type="search" id="groupSearch" class="search-input" placeholder="Filtrar grupos por nome...">
+        </div>
+        <div class="selection-controls">
+          <span><span id="selectedCount">0</span> selecionado(s)</span>
+          <div>
+            <a id="selectAllBtn">Marcar todos</a> · <a id="clearSelectionBtn">Limpar</a>
+          </div>
+        </div>
+      </div>
+
+      <ul id="groupList" class="group-list"></ul>
+
+      <div id="batchSidebarBar" class="batch-sidebar-bar" hidden>
+        <span style="font-weight:600; font-size:12px;" id="batchSidebarText">0 grupos</span>
+        <button class="btn primary sm" id="startBatchBtn">Extrair Selecionados</button>
+      </div>
+    </aside>
+
+    <!-- Right Column: Detail View -->
+    <main class="card detail-card" id="detailPanel">
+      <div id="emptyDetail" class="detail-empty">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <p>Selecione um grupo ao lado para inspecionar e extrair os membros.</p>
+        <p style="font-size:12px;">Ou selecione múltiplos grupos usando os checkboxes para extração consolidada.</p>
+      </div>
+
+      <div id="loadingDetail" class="detail-empty" hidden>
+        <div class="spinner"></div>
+        <p id="loadingDetailMsg">Extraindo participantes do WhatsApp...</p>
+        <p style="font-size:12px; color:var(--text-muted);">Grupos com mais de 500 membros podem levar alguns segundos.</p>
+      </div>
+
+      <div id="activeGroupView" hidden>
+        <!-- Group Header -->
+        <div class="detail-header">
+          <div class="detail-title-group">
+            <h2 id="activeGroupName">Nome do Grupo</h2>
+            <div class="detail-meta">
+              <span id="activeGroupCount">0 participantes</span>
+              <span>•</span>
+              <span id="activeGroupDuration" class="badge">⚡ 0.0s</span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn sm" id="refreshActiveGroupBtn" title="Buscar participantes mais recentes do WhatsApp">Atualizar</button>
+            <button class="btn sm" id="copyPhonesBtn">Copiar Telefones</button>
+            <button class="btn sm" id="exportCsvBtn">Baixar CSV</button>
+            <button class="btn sm" id="exportExcelBtn">Baixar Excel</button>
+            <button class="btn sm" id="exportJsonBtn">JSON</button>
+          </div>
+        </div>
+
+        <!-- Metrics Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Total Membros</span>
+            <span class="metric-value" id="metricTotal">0</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Com Telefone</span>
+            <span class="metric-value" style="color:var(--accent);" id="metricPhones">0</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Administradores</span>
+            <span class="metric-value" style="color:#0284c7;" id="metricAdmins">0</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Privacidade (LID)</span>
+            <span class="metric-value" style="color:#d97706;" id="metricHidden">0</span>
+          </div>
+        </div>
+
+        <!-- Table Toolbar -->
+        <div class="table-toolbar" style="margin-top:16px;">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">Todos (<span id="tabCountAll">0</span>)</button>
+            <button class="filter-tab" data-filter="phones">Com Telefone (<span id="tabCountPhones">0</span>)</button>
+            <button class="filter-tab" data-filter="admins">Admins (<span id="tabCountAdmins">0</span>)</button>
+            <button class="filter-tab" data-filter="hidden">Privacidade (<span id="tabCountHidden">0</span>)</button>
+          </div>
+          <div class="table-search-wrap search-input-wrap">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="search" id="memberSearch" class="search-input" placeholder="Buscar por nome ou número...">
+          </div>
+        </div>
+
+        <!-- Data Table (Guidance responsive table container with sticky headers) -->
+        <div class="table-wrapper" style="margin-top:12px;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:48px;">#</th>
+                <th class="sortable" data-sort="name">Nome <span class="sort-icon" id="sortIconName">▲</span></th>
+                <th class="sortable" data-sort="phone">Telefone <span class="sort-icon" id="sortIconPhone"></span></th>
+                <th class="sortable" data-sort="admin" style="width:120px;">Tipo <span class="sort-icon" id="sortIconAdmin"></span></th>
+              </tr>
+            </thead>
+            <tbody id="membersTbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Pagination & Counts -->
+        <div class="table-footer">
+          <div>Exibindo <span id="pageShowingText">0-0</span> de <span id="pageTotalText">0</span> contatos</div>
+          <div class="pagination-controls">
+            <label for="pageSizeSelect">Linhas:</label>
+            <select id="pageSizeSelect" class="page-select">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="all">Todas</option>
+            </select>
+            <button class="btn sm" id="prevPageBtn">Anterior</button>
+            <span id="pageCurrentLabel" style="font-weight:600;">1 / 1</span>
+            <button class="btn sm" id="nextPageBtn">Próxima</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Batch Extraction Floating Drawer -->
+<div id="batchDrawer" class="batch-drawer" hidden>
+  <div class="batch-header">
+    <span class="batch-title" id="batchTitle">Extração em Lote</span>
+    <span class="badge" id="batchPercentage">0%</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div id="batchProgressFill" class="progress-bar-fill" style="width: 0%;"></div>
+  </div>
+  <div class="progress-meta">
+    <span id="batchCurrentGroupText">Iniciando...</span>
+    <span id="batchCounterText">0 / 0</span>
+  </div>
+  <div id="batchCompletedSummary" hidden style="background:var(--surface-alt); padding:10px; border-radius:6px; font-size:12px;">
+    <div>Total extraído: <b><span id="batchSummaryTotal">0</span> contatos</b></div>
+    <div>Telefones únicos: <b><span id="batchSummaryUnique">0</span></b></div>
+    <label style="margin-top:6px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="batchDeduplicateCheck" checked> Desduplicar contatos repetidos
+    </label>
+  </div>
+  <div class="batch-actions">
+    <button class="btn sm danger" id="batchCancelBtn">Cancelar</button>
+    <button class="btn sm" id="batchCopyPhonesBtn" hidden>Copiar Números</button>
+    <button class="btn sm" id="batchDownloadCsvBtn" hidden>Baixar CSV</button>
+    <button class="btn sm" id="batchDownloadExcelBtn" hidden>Baixar Excel</button>
+    <button class="btn sm primary" id="batchCloseBtn" hidden>Fechar</button>
+  </div>
+</div>
+
+<!-- Toast notifications container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+  /* ---------- State Management ---------- */
+  const $ = (id) => document.getElementById(id);
+
+  let appState = {
+    status: 'starting',
+    message: '',
+    qr: null,
+    groups: [],
+    error: null,
+  };
+
+  let selectedGroupIds = new Set();
+  let activeGroup = null; // currently loaded group object { id, name, participants, totalDurationMs }
+  let activeFilter = 'all'; // all | phones | admins | hidden
+  let memberSearchTerm = '';
+  let sortColumn = 'name';
+  let sortAsc = true;
+  let currentPage = 1;
+  let pageSize = 50;
+
+  // Cache client-side para evitar recarregamento repetido
+  const clientCache = new Map(); // id -> groupData
+
+  // Batch Extraction State
+  let batchActive = false;
+  let batchResults = [];
+
+  /* ---------- Theme Toggle ---------- */
+  function initTheme() {
+    const saved = localStorage.getItem('extrator_theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = saved ? saved === 'dark' : prefersDark;
+    applyTheme(isDark);
+  }
+
+  function applyTheme(isDark) {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    $('themeIcon').textContent = isDark ? '☀️' : '🌙';
+    localStorage.setItem('extrator_theme', isDark ? 'dark' : 'light');
+  }
+
+  $('themeToggleBtn').onclick = () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    applyTheme(!isDark);
+  };
+
+  /* ---------- Toast Notification ---------- */
+  function showToast(text, type = 'info', duration = 3200) {
+    const container = $('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = text;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      toast.style.transition = 'all 0.25s ease';
+      setTimeout(() => toast.remove(), 260);
+    }, duration);
+  }
+
+  /* ---------- Phone Formatting & Cleaning ---------- */
+  function cleanDigits(phone) {
+    return String(phone || '').replace(/\D/g, '');
+  }
+
+  function formatPhoneDisplay(phone) {
+    const digits = cleanDigits(phone);
+    if (!digits) return '—';
+
+    // Padrão Brasileiro (+55)
+    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+      const ddd = digits.slice(2, 4);
+      const rest = digits.slice(4);
+      if (rest.length === 9) {
+        return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+      } else if (rest.length === 8) {
+        return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+      }
+    }
+    // Internacional genérico
+    if (digits.length > 7) {
+      return `+${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`;
+    }
+    return `+${digits}`;
+  }
+
+  /* ---------- Real-Time Server Communication (SSE + Fallback) ---------- */
+  let eventSource = null;
+  let sseRetryTimeout = null;
+
+  function connectSSE() {
+    if (eventSource) {
+      try { eventSource.close(); } catch (_) {}
+    }
+
+    try {
+      eventSource = new EventSource('/api/events');
+
+      eventSource.addEventListener('state', (e) => {
+        try {
+          const s = JSON.parse(e.data);
+          handleStateUpdate(s);
+        } catch (err) {
+          console.error('Erro ao processar evento de estado:', err);
+        }
+      });
+
+      eventSource.addEventListener('batch_start', (e) => {
+        const data = JSON.parse(e.data);
+        openBatchDrawer(data.total);
+      });
+
+      eventSource.addEventListener('batch_progress', (e) => {
+        const data = JSON.parse(e.data);
+        updateBatchProgress(data);
+      });
+
+      eventSource.addEventListener('batch_item_done', (e) => {
+        const data = JSON.parse(e.data);
+        // Salva também no cache local
+        if (data.groupId) {
+          // Atualiza lista
+          updateGroupMemberCountInUI(data.groupId, data.participantsCount);
+        }
+      });
+
+      eventSource.addEventListener('batch_complete', (e) => {
+        const data = JSON.parse(e.data);
+        finishBatch(data.results);
+      });
+
+      eventSource.addEventListener('batch_cancelled', (e) => {
+        const data = JSON.parse(e.data);
+        finishBatch(data.results, true);
+      });
+
+      let sseReceived = false;
+      eventSource.onopen = () => {
+        sseReceived = true;
+      };
+
+      eventSource.onerror = () => {
+        console.warn('SSE indisponível ou desconectado. Ativando fallback e tentando reconectar...');
+        try { eventSource.close(); } catch (_) {}
+        eventSource = null;
+        fetchCurrentState();
+        clearTimeout(sseRetryTimeout);
+        sseRetryTimeout = setTimeout(connectSSE, 4000);
+      };
+    } catch (err) {
+      console.warn('Navegador sem suporte a SSE. Usando polling.', err);
+      fetchCurrentState();
+      setInterval(fetchCurrentState, 3000);
+    }
+  }
+
+  async function fetchCurrentState() {
+    try {
+      const res = await fetch('/api/state');
+      if (res.ok) {
+        const data = await res.json();
+        handleStateUpdate(data);
+      }
+    } catch (_) {}
+  }
+
+  /* ---------- Render Connection State ---------- */
+  function handleStateUpdate(s) {
+    appState = s;
+    const ready = s.status === 'ready';
+
+    // Status Pill
+    const pill = $('statusPill');
+    const pillText = $('statusPillText');
+    pill.className = 'pill ' + (ready ? 'ok' : s.status === 'error' ? 'err' : 'loading');
+    pillText.textContent = ready ? `${s.groups ? s.groups.length : 0} Grupos Prontos` : s.message;
+
+    $('mainView').hidden = !ready;
+    $('statusCard').hidden = ready;
+
+    if (!ready) {
+      $('spinner').hidden = !(s.status === 'starting' || s.status === 'loading');
+      const showQr = s.status === 'qr' && !!s.qr;
+      $('qr').hidden = !showQr;
+      if (showQr && $('qr').src !== s.qr) $('qr').src = s.qr;
+
+      $('statusMsg').textContent = showQr
+        ? 'Abra o WhatsApp no celular > Aparelhos Conectados > Conectar um aparelho e escaneie o código acima.'
+        : s.message || '';
+
+      $('errorBox').hidden = !s.error;
+      $('errorBox').textContent = s.error || '';
+      $('retryBtn').hidden = s.status !== 'error';
+    } else {
+      renderGroupList();
+    }
+  }
+
+  /* ---------- Group Sidebar Functions ---------- */
+  function renderGroupList() {
+    const list = $('groupList');
+    const q = $('groupSearch').value.trim().toLowerCase();
+    const groups = appState.groups || [];
+    $('totalGroupsCount').textContent = groups.length;
+
+    const filtered = groups.filter((g) => (g.name || '').toLowerCase().includes(q));
+
+    list.replaceChildren();
+
+    if (!filtered.length) {
+      const empty = document.createElement('li');
+      empty.className = 'group-item';
+      empty.style.justifyContent = 'center';
+      empty.style.color = 'var(--text-muted)';
+      empty.textContent = groups.length ? 'Nenhum grupo com este filtro.' : 'Nenhum grupo encontrado.';
+      list.appendChild(empty);
+      return;
+    }
+
+    for (const g of filtered) {
+      const isSelected = selectedGroupIds.has(g.id);
+      const isActive = activeGroup && activeGroup.id === g.id;
+
+      const li = document.createElement('li');
+      li.className = `group-item ${isActive ? 'active' : ''}`;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'group-checkbox';
+      checkbox.checked = isSelected;
+      checkbox.onclick = (e) => {
+        e.stopPropagation();
+        toggleGroupSelection(g.id, checkbox.checked);
+      };
+
+      const info = document.createElement('div');
+      info.className = 'group-info';
+      info.onclick = () => openGroup(g);
+
+      const name = document.createElement('div');
+      name.className = 'group-name';
+      name.textContent = g.name || '(Sem nome)';
+      name.title = g.name || '';
+
+      const sub = document.createElement('div');
+      sub.className = 'group-sub';
+      sub.textContent = g.size > 0 ? `${g.size} participantes` : 'Membros pendentes';
+
+      info.appendChild(name);
+      info.appendChild(sub);
+
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = g.size > 0 ? `${g.size}` : '—';
+
+      li.appendChild(checkbox);
+      li.appendChild(info);
+      li.appendChild(badge);
+      list.appendChild(li);
+    }
+
+    updateSelectedCounter();
+  }
+
+  function toggleGroupSelection(id, checked) {
+    if (checked) selectedGroupIds.add(id);
+    else selectedGroupIds.delete(id);
+    updateSelectedCounter();
+  }
+
+  function updateSelectedCounter() {
+    const count = selectedGroupIds.size;
+    $('selectedCount').textContent = count;
+    $('batchSidebarBar').hidden = count === 0;
+    $('batchSidebarText').textContent = `${count} grupo(s) selecionado(s)`;
+  }
+
+  $('selectAllBtn').onclick = () => {
+    (appState.groups || []).forEach((g) => selectedGroupIds.add(g.id));
+    renderGroupList();
+  };
+
+  $('clearSelectionBtn').onclick = () => {
+    selectedGroupIds.clear();
+    renderGroupList();
+  };
+
+  $('groupSearch').oninput = renderGroupList;
+
+  function updateGroupMemberCountInUI(groupId, count) {
+    const g = (appState.groups || []).find((x) => x.id === groupId);
+    if (g) {
+      g.size = count;
+      renderGroupList();
+    }
+  }
+
+  /* ---------- Single Group Detail ---------- */
+  async function openGroup(g, forceRefresh = false) {
+    activeGroup = { id: g.id, name: g.name };
+    renderGroupList();
+
+    $('emptyDetail').hidden = true;
+    $('activeGroupView').hidden = true;
+    $('loadingDetail').hidden = false;
+    $('loadingDetailMsg').textContent = `Carregando membros de "${g.name}"...`;
+
+    // Verifica cache local client
+    if (!forceRefresh && clientCache.has(g.id)) {
+      activeGroup = clientCache.get(g.id);
+      renderActiveGroup();
+      return;
+    }
+
+    try {
+      const url = `/api/group?id=${encodeURIComponent(g.id)}${forceRefresh ? '&refresh=1' : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar grupo.');
+
+      clientCache.set(g.id, data);
+      updateGroupMemberCountInUI(g.id, data.participants.length);
+
+      if (activeGroup.id === g.id) {
+        activeGroup = data;
+        renderActiveGroup();
+      }
+    } catch (err) {
+      $('loadingDetail').hidden = true;
+      showToast(`Erro ao extrair grupo: ${err.message}`, 'error', 4500);
+      $('emptyDetail').hidden = false;
+    }
+  }
+
+  function renderActiveGroup() {
+    $('loadingDetail').hidden = true;
+    $('emptyDetail').hidden = true;
+    $('activeGroupView').hidden = false;
+
+    $('activeGroupName').textContent = activeGroup.name;
+    const list = activeGroup.participants || [];
+    $('activeGroupCount').textContent = `${list.length} participante(s)`;
+    $('activeGroupDuration').textContent = activeGroup.durationSec
+      ? `⚡ ${activeGroup.durationSec}s`
+      : '⚡ Cache em memória';
+
+    // Métricas
+    const phonesCount = list.filter((p) => p.phone && !p.hidden).length;
+    const adminsCount = list.filter((p) => p.admin).length;
+    const hiddenCount = list.filter((p) => p.hidden).length;
+
+    $('metricTotal').textContent = list.length;
+    $('metricPhones').textContent = phonesCount;
+    $('metricAdmins').textContent = adminsCount;
+    $('metricHidden').textContent = hiddenCount;
+
+    $('tabCountAll').textContent = list.length;
+    $('tabCountPhones').textContent = phonesCount;
+    $('tabCountAdmins').textContent = adminsCount;
+    $('tabCountHidden').textContent = hiddenCount;
+
+    currentPage = 1;
+    renderTable();
+  }
+
+  /* ---------- Table Rendering & Filtering ---------- */
+  function getFilteredAndSortedMembers() {
+    if (!activeGroup || !activeGroup.participants) return [];
+    let list = [...activeGroup.participants];
+
+    // Filtro por Tab
+    if (activeFilter === 'phones') list = list.filter((p) => p.phone && !p.hidden);
+    else if (activeFilter === 'admins') list = list.filter((p) => p.admin);
+    else if (activeFilter === 'hidden') list = list.filter((p) => p.hidden);
+
+    // Busca interna por nome ou número
+    const q = memberSearchTerm.toLowerCase();
+    if (q) {
+      list = list.filter((p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.phone || '').includes(q)
+      );
+    }
+
+    // Ordenação
+    list.sort((a, b) => {
+      let valA = a[sortColumn] ?? '';
+      let valB = b[sortColumn] ?? '';
+      if (sortColumn === 'admin') {
+        valA = a.admin ? 1 : 0;
+        valB = b.admin ? 1 : 0;
+      }
+      if (typeof valA === 'string') {
+        return sortAsc
+          ? valA.localeCompare(valB, 'pt-BR', { numeric: true })
+          : valB.localeCompare(valA, 'pt-BR', { numeric: true });
+      }
+      return sortAsc ? valA - valB : valB - valA;
+    });
+
+    return list;
+  }
+
+  function renderTable() {
+    const list = getFilteredAndSortedMembers();
+    const tbody = $('membersTbody');
+    tbody.replaceChildren();
+
+    const total = list.length;
+    $('pageTotalText').textContent = total;
+
+    const limit = pageSize === 'all' ? total : parseInt(pageSize, 10);
+    const totalPages = Math.max(1, Math.ceil(total / (limit || 1)));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIdx = (currentPage - 1) * limit;
+    const endIdx = Math.min(startIdx + limit, total);
+
+    $('pageShowingText').textContent = total === 0 ? '0-0' : `${startIdx + 1}-${endIdx}`;
+    $('pageCurrentLabel').textContent = `${currentPage} / ${totalPages}`;
+    $('prevPageBtn').disabled = currentPage <= 1;
+    $('nextPageBtn').disabled = currentPage >= totalPages;
+
+    const pageItems = list.slice(startIdx, endIdx);
+
+    if (!pageItems.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.style.textAlign = 'center';
+      td.style.padding = '24px';
+      td.style.color = 'var(--text-muted)';
+      td.textContent = 'Nenhum contato corresponde aos filtros aplicados.';
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    pageItems.forEach((p, idx) => {
+      const globalIdx = startIdx + idx + 1;
+      const tr = document.createElement('tr');
+
+      // #
+      const tdIdx = document.createElement('td');
+      tdIdx.style.color = 'var(--text-muted)';
+      tdIdx.textContent = globalIdx;
+
+      // Nome (Perfil WhatsApp e Agenda)
+      const tdName = document.createElement('td');
+      const nameWrap = document.createElement('div');
+      nameWrap.style.display = 'flex';
+      nameWrap.style.flexDirection = 'column';
+      nameWrap.style.gap = '2px';
+
+      const mainName = document.createElement('span');
+      mainName.style.fontWeight = '500';
+      mainName.textContent = p.pushname || p.name || '—';
+      nameWrap.appendChild(mainName);
+
+      if (p.savedName && p.pushname && p.savedName !== p.pushname) {
+        const subName = document.createElement('span');
+        subName.style.fontSize = '11px';
+        subName.style.color = 'var(--text-muted)';
+        subName.textContent = `Agenda: ${p.savedName}`;
+        nameWrap.appendChild(subName);
+      } else if (!p.pushname && p.savedName) {
+        const subName = document.createElement('span');
+        subName.style.fontSize = '11px';
+        subName.style.color = 'var(--accent)';
+        subName.textContent = '(Salvo na Agenda)';
+        nameWrap.appendChild(subName);
+      }
+      tdName.appendChild(nameWrap);
+
+      // Telefone formatado com botão copiar
+      const tdPhone = document.createElement('td');
+      const phoneWrap = document.createElement('div');
+      phoneWrap.className = 'phone-cell';
+
+      const phoneText = document.createElement('span');
+      phoneText.textContent = p.phone ? formatPhoneDisplay(p.phone) : '—';
+      phoneWrap.appendChild(phoneText);
+
+      if (p.phone) {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-icon-btn';
+        copyBtn.title = 'Copiar telefone';
+        copyBtn.innerHTML = '📋';
+        copyBtn.onclick = (e) => {
+          e.stopPropagation();
+          copyToClipboard(cleanDigits(p.phone), 'Telefone copiado!');
+        };
+        phoneWrap.appendChild(copyBtn);
+      }
+      tdPhone.appendChild(phoneWrap);
+
+      // Status
+      const tdStatus = document.createElement('td');
+      if (p.admin) {
+        const admBadge = document.createElement('span');
+        admBadge.className = 'tag-badge admin';
+        admBadge.textContent = 'Admin';
+        tdStatus.appendChild(admBadge);
+      }
+      if (p.hidden) {
+        const lidBadge = document.createElement('span');
+        lidBadge.className = 'tag-badge lid';
+        lidBadge.style.marginLeft = p.admin ? '4px' : '0';
+        lidBadge.textContent = 'Privacidade';
+        tdStatus.appendChild(lidBadge);
+      }
+      if (!p.admin && !p.hidden) {
+        const memBadge = document.createElement('span');
+        memBadge.className = 'tag-badge member';
+        memBadge.textContent = 'Membro';
+        tdStatus.appendChild(memBadge);
+      }
+
+      tr.appendChild(tdIdx);
+      tr.appendChild(tdName);
+      tr.appendChild(tdPhone);
+      tr.appendChild(tdStatus);
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Filter Tabs Handler
+  document.querySelectorAll('.filter-tab').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('.filter-tab').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      currentPage = 1;
+      renderTable();
+    };
+  });
+
+  // Search input inside group table
+  $('memberSearch').oninput = (e) => {
+    memberSearchTerm = e.target.value.trim();
+    currentPage = 1;
+    renderTable();
+  };
+
+  // Sort Handler
+  document.querySelectorAll('th.sortable').forEach((th) => {
+    th.onclick = () => {
+      const col = th.dataset.sort;
+      if (sortColumn === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortColumn = col;
+        sortAsc = true;
+      }
+      updateSortIcons();
+      renderTable();
+    };
+  });
+
+  function updateSortIcons() {
+    $('sortIconName').textContent = sortColumn === 'name' ? (sortAsc ? '▲' : '▼') : '';
+    $('sortIconPhone').textContent = sortColumn === 'phone' ? (sortAsc ? '▲' : '▼') : '';
+    $('sortIconAdmin').textContent = sortColumn === 'admin' ? (sortAsc ? '▲' : '▼') : '';
+  }
+
+  // Pagination Handlers
+  $('pageSizeSelect').onchange = (e) => {
+    pageSize = e.target.value;
+    currentPage = 1;
+    renderTable();
+  };
+  $('prevPageBtn').onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
+  $('nextPageBtn').onclick = () => { currentPage++; renderTable(); };
+
+  $('refreshActiveGroupBtn').onclick = () => {
+    if (activeGroup) openGroup(activeGroup, true);
+  };
+
+  /* ---------- Batch Extraction Operations ---------- */
+  $('startBatchBtn').onclick = () => {
+    if (selectedGroupIds.size === 0) return;
+    const ids = Array.from(selectedGroupIds);
+    fetch('/api/batch-extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    }).catch((err) => showToast(`Erro ao iniciar lote: ${err.message}`, 'error'));
+  };
+
+  function openBatchDrawer(total) {
+    batchActive = true;
+    batchResults = [];
+    $('batchDrawer').hidden = false;
+    $('batchTitle').textContent = `Extraindo ${total} Grupos Selecionados`;
+    $('batchPercentage').textContent = '0%';
+    $('batchProgressFill').style.width = '0%';
+    $('batchCurrentGroupText').textContent = 'Preparando fila de extração...';
+    $('batchCounterText').textContent = `0 / ${total}`;
+
+    $('batchCompletedSummary').hidden = true;
+    $('batchCancelBtn').hidden = false;
+    $('batchCopyPhonesBtn').hidden = true;
+    $('batchDownloadCsvBtn').hidden = true;
+    $('batchDownloadExcelBtn').hidden = true;
+    $('batchCloseBtn').hidden = true;
+  }
+
+  function updateBatchProgress(data) {
+    const pct = `${data.percentage}%`;
+    $('batchPercentage').textContent = pct;
+    $('batchProgressFill').style.width = pct;
+    $('batchCurrentGroupText').textContent = `Extraindo: ${data.groupName}`;
+    $('batchCounterText').textContent = `${data.current} / ${data.total}`;
+  }
+
+  function finishBatch(results, cancelled = false) {
+    batchActive = false;
+    batchResults = results || [];
+
+    $('batchProgressFill').style.width = '100%';
+    $('batchPercentage').textContent = '100%';
+    $('batchCurrentGroupText').textContent = cancelled ? 'Lote cancelado' : 'Concluído com sucesso!';
+
+    // Métricas consolidadas
+    let totalContacts = 0;
+    const uniquePhones = new Set();
+
+    batchResults.forEach((g) => {
+      (g.participants || []).forEach((p) => {
+        totalContacts++;
+        if (p.phone && !p.hidden) {
+          uniquePhones.add(cleanDigits(p.phone));
+        }
+      });
+    });
+
+    $('batchSummaryTotal').textContent = totalContacts;
+    $('batchSummaryUnique').textContent = uniquePhones.size;
+
+    $('batchCompletedSummary').hidden = false;
+    $('batchCancelBtn').hidden = true;
+    $('batchCopyPhonesBtn').hidden = false;
+    $('batchDownloadCsvBtn').hidden = false;
+    $('batchDownloadExcelBtn').hidden = false;
+    $('batchCloseBtn').hidden = false;
+
+    showToast(cancelled ? 'Extração em lote interrompida.' : 'Extração em lote finalizada!', cancelled ? 'error' : 'success');
+  }
+
+  $('batchCancelBtn').onclick = () => {
+    fetch('/api/batch-cancel', { method: 'POST' });
+    $('batchCurrentGroupText').textContent = 'Solicitando cancelamento...';
+  };
+
+  $('batchCloseBtn').onclick = () => {
+    $('batchDrawer').hidden = true;
+  };
+
+  /* ---------- Export Utilities (CSV, Excel XML, JSON, Clipboard) ---------- */
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function copyToClipboard(text, successMsg = 'Copiado para a área de transferência!') {
+    if (!text) {
+      showToast('Nenhum dado para copiar.', 'error');
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => showToast(successMsg, 'success'),
+        () => fallbackCopy(text, successMsg)
+      );
+    } else {
+      fallbackCopy(text, successMsg);
+    }
+  }
+
+  function fallbackCopy(text, successMsg) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showToast(successMsg, 'success');
+    } catch (_) {
+      showToast('Falha ao copiar dados.', 'error');
+    }
+    ta.remove();
+  }
+
+  /* Single Group Exports */
+  $('copyPhonesBtn').onclick = () => {
+    if (!activeGroup || !activeGroup.participants) return;
+    const phones = activeGroup.participants
+      .filter((p) => p.phone && !p.hidden)
+      .map((p) => cleanDigits(p.phone));
+    const unique = [...new Set(phones)];
+    copyToClipboard(unique.join('\r\n'), `${unique.length} números copiados!`);
+  };
+
+  $('exportCsvBtn').onclick = () => {
+    if (!activeGroup || !activeGroup.participants) return;
+    const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const rows = [['nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status']].concat(
+      activeGroup.participants.map((p) => [
+        p.pushname || p.name || '',
+        p.savedName || '',
+        p.phone ? '+' + cleanDigits(p.phone) : '',
+        p.admin ? 'sim' : 'não',
+        p.hidden ? 'ID de privacidade (LID)' : 'Normal',
+      ])
+    );
+    const csv = '\uFEFF' + rows.map((r) => r.map(esc).join(';')).join('\r\n');
+    const filename = `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.csv`;
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), filename);
+  };
+
+  $('exportExcelBtn').onclick = () => {
+    if (!activeGroup || !activeGroup.participants) return;
+    const xml = generateExcelXml([
+      {
+        groupName: activeGroup.name,
+        participants: activeGroup.participants,
+      },
+    ]);
+    const filename = `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.xls`;
+    downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), filename);
+  };
+
+  $('exportJsonBtn').onclick = () => {
+    if (!activeGroup) return;
+    const jsonStr = JSON.stringify(activeGroup, null, 2);
+    const filename = `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.json`;
+    downloadBlob(new Blob([jsonStr], { type: 'application/json;charset=utf-8' }), filename);
+  };
+
+  /* Batch Exports */
+  $('batchCopyPhonesBtn').onclick = () => {
+    const phones = [];
+    batchResults.forEach((g) => {
+      (g.participants || []).forEach((p) => {
+        if (p.phone && !p.hidden) phones.push(cleanDigits(p.phone));
+      });
+    });
+    const unique = [...new Set(phones)];
+    copyToClipboard(unique.join('\r\n'), `${unique.length} telefones únicos copiados!`);
+  };
+
+  $('batchDownloadCsvBtn').onclick = () => {
+    const deduplicate = $('batchDeduplicateCheck').checked;
+    const seenPhones = new Set();
+    const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+
+    const rows = [['grupo_origem', 'nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status']];
+
+    batchResults.forEach((g) => {
+      (g.participants || []).forEach((p) => {
+        const phone = cleanDigits(p.phone);
+        if (deduplicate && phone && !p.hidden) {
+          if (seenPhones.has(phone)) return;
+          seenPhones.add(phone);
+        }
+        rows.push([
+          g.name,
+          p.pushname || p.name || '',
+          p.savedName || '',
+          phone ? '+' + phone : '',
+          p.admin ? 'sim' : 'não',
+          p.hidden ? 'ID de privacidade (LID)' : 'Normal',
+        ]);
+      });
+    });
+
+    const csv = '\uFEFF' + rows.map((r) => r.map(esc).join(';')).join('\r\n');
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `extracao_consolidada_${Date.now()}.csv`);
+  };
+
+  $('batchDownloadExcelBtn').onclick = () => {
+    const deduplicate = $('batchDeduplicateCheck').checked;
+    const seenPhones = new Set();
+
+    const flatGroups = [
+      {
+        groupName: 'Consolidado',
+        participants: [],
+      },
+    ];
+
+    batchResults.forEach((g) => {
+      (g.participants || []).forEach((p) => {
+        const phone = cleanDigits(p.phone);
+        if (deduplicate && phone && !p.hidden) {
+          if (seenPhones.has(phone)) return;
+          seenPhones.add(phone);
+        }
+        flatGroups[0].participants.push({
+          groupName: g.name,
+          name: p.name,
+          phone: p.phone,
+          admin: p.admin,
+          hidden: p.hidden,
+        });
+      });
+    });
+
+    const xml = generateExcelXml(flatGroups, true);
+    downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), `extracao_consolidada_${Date.now()}.xls`);
+  };
+
+  // Helper para gerar planilha XML Spreadsheet compatível nativamente com Excel
+  function generateExcelXml(groupsList, includeGroupColumn = false) {
+    const esc = (s) =>
+      String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    let rowsXml = '';
+
+    // Cabeçalho
+    rowsXml += '<Row ss:StyleID="Header">';
+    if (includeGroupColumn) rowsXml += '<Cell><Data ss:Type="String">Grupo</Data></Cell>';
+    rowsXml += '<Cell><Data ss:Type="String">Nome WhatsApp (Perfil)</Data></Cell>';
+    rowsXml += '<Cell><Data ss:Type="String">Nome na Agenda</Data></Cell>';
+    rowsXml += '<Cell><Data ss:Type="String">Telefone</Data></Cell>';
+    rowsXml += '<Cell><Data ss:Type="String">Admin</Data></Cell>';
+    rowsXml += '<Cell><Data ss:Type="String">Status</Data></Cell>';
+    rowsXml += '</Row>\n';
+
+    groupsList.forEach((grp) => {
+      (grp.participants || []).forEach((p) => {
+        const phone = p.phone ? '+' + cleanDigits(p.phone) : '';
+        const admin = p.admin ? 'Sim' : 'Não';
+        const status = p.hidden ? 'ID de privacidade (LID)' : 'Normal';
+        const whatsName = p.pushname || p.name || '';
+        const savedName = p.savedName || '';
+
+        rowsXml += '<Row>';
+        if (includeGroupColumn) rowsXml += `<Cell><Data ss:Type="String">${esc(p.groupName || grp.groupName)}</Data></Cell>`;
+        rowsXml += `<Cell><Data ss:Type="String">${esc(whatsName)}</Data></Cell>`;
+        rowsXml += `<Cell><Data ss:Type="String">${esc(savedName)}</Data></Cell>`;
+        rowsXml += `<Cell><Data ss:Type="String">${esc(phone)}</Data></Cell>`;
+        rowsXml += `<Cell><Data ss:Type="String">${esc(admin)}</Data></Cell>`;
+        rowsXml += `<Cell><Data ss:Type="String">${esc(status)}</Data></Cell>`;
+        rowsXml += '</Row>\n';
+      });
+    });
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#00A884" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Contatos">
+  <Table>
+   ${rowsXml}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+  }
+
+  /* ---------- Action Buttons ---------- */
+  $('retryBtn').onclick = () => fetch('/api/retry-groups', { method: 'POST' });
+  $('refreshGroupsBtn').onclick = () => fetch('/api/retry-groups', { method: 'POST' });
+  $('restartBtn').onclick = () => fetch('/api/restart', { method: 'POST' });
+  $('restartHeroBtn').onclick = () => fetch('/api/restart', { method: 'POST' });
+
+  // Iniciação
+  initTheme();
+  connectSSE();
+</script>
+</body>
+</html>
