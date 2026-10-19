@@ -8,6 +8,7 @@ const { Client, RemoteAuth } = require('whatsapp-web.js');
 const { SqliteStore } = require('./sqlite-store');
 const { listGroups, getGroupParticipants } = require('./whatsapp-extractor');
 const log = require('./logger');
+const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = process.env.HOST || '127.0.0.1'; // apenas local
@@ -625,6 +626,11 @@ const server = http.createServer(async (req, res) => {
       startClient();
       sendJson(res, 200, { ok: true });
       return logDone(200);
+    }
+
+    if (req.method === 'GET' && (url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/'))) {
+      await servirArquivoPublico(res, RAIZ_PUBLICA, url.pathname);
+      return logDone(res.statusCode);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/group') {
