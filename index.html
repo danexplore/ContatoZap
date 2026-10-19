@@ -752,6 +752,12 @@ tr:hover .copy-icon-btn { opacity: 1; }
 }
 .member-avatar:hover { transform: scale(1.15); box-shadow: var(--shadow-md); }
 
+/* Avatar ocupa a largura da coluna Foto, que é redimensionável */
+td.photo-cell { padding-inline: var(--space-2); text-align: center; }
+td.photo-cell .member-avatar,
+td.photo-cell .avatar-fallback { width: 100%; height: auto; aspect-ratio: 1; min-width: 28px; }
+td.photo-cell .member-avatar { display: block; cursor: zoom-in; }
+
 .avatar-fallback {
   width: 36px;
   height: 36px;
@@ -898,6 +904,134 @@ tr:hover .copy-icon-btn { opacity: 1; }
   .toast { animation: none; }
 }
 
+/* ========== SYNC BANNER ========== */
+.sync-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: hsl(var(--color-warning-subtle));
+  border: 1px solid hsl(var(--color-warning) / 0.4);
+  border-radius: var(--radius-md);
+  color: hsl(var(--color-warning));
+  font: var(--text-body-sm);
+  font-weight: 500;
+}
+.sync-banner[hidden] { display: none; }
+.sync-banner svg { width: 16px; height: 16px; flex-shrink: 0; animation: spin 1.2s linear infinite; }
+.sync-banner-text { flex: 1; min-width: 0; color: hsl(var(--color-text-primary)); }
+.sync-progress-bar {
+  flex: 0 1 180px;
+  height: 6px;
+  background: hsl(var(--color-warning) / 0.15);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.sync-progress-fill {
+  height: 100%;
+  background: hsl(var(--color-warning));
+  border-radius: var(--radius-full);
+  transition: width 300ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-banner svg { animation-duration: 3s; }
+}
+
+/* ========== EXCEL IMAGE SIZE ========== */
+.image-size-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--text-body-sm);
+  color: hsl(var(--color-text-secondary));
+}
+.image-size-field input {
+  width: 64px;
+  height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid hsl(var(--color-border-default));
+  border-radius: var(--radius-md);
+  background: hsl(var(--color-bg-primary));
+  color: hsl(var(--color-text-primary));
+  font: var(--text-body-sm);
+}
+.image-size-field input:focus { outline: none; border-color: hsl(var(--color-border-focus)); box-shadow: var(--shadow-focus); }
+
+/* ========== PHOTO COLUMN RESIZE ========== */
+th.photo-col { position: relative; text-align: center; }
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 150ms ease-out;
+}
+.col-resize-handle:hover,
+.col-resize-handle.active { background: hsl(var(--color-primary)); }
+
+/* ========== PHOTO PREVIEW MODAL ========== */
+.photo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsla(215, 20%, 8%, 0.75);
+  cursor: zoom-out;
+  animation: fadeIn 150ms ease-out;
+}
+.photo-modal-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  cursor: default;
+  animation: scaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.photo-modal-close {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-5);
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  background: hsla(0, 0%, 100%, 0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+.photo-modal-close:hover { background: hsla(0, 0%, 100%, 0.3); }
+.photo-modal-close:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.photo-modal-close svg { width: 18px; height: 18px; }
+.photo-modal-name {
+  position: fixed;
+  bottom: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-full);
+  background: hsla(0, 0%, 0%, 0.6);
+  color: #fff;
+  font: var(--text-body-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .photo-modal-overlay, .photo-modal-img { animation: none; }
+}
+
 /* ========== SKELETON ========== */
 .skeleton {
   background: linear-gradient(90deg, hsl(var(--color-bg-tertiary)) 25%, hsl(var(--color-bg-secondary)) 50%, hsl(var(--color-bg-tertiary)) 75%);
@@ -946,6 +1080,7 @@ tr:hover .copy-icon-btn { opacity: 1; }
   td { min-height: 44px; }
 }
 </style>
+<script src="/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -976,6 +1111,15 @@ tr:hover .copy-icon-btn { opacity: 1; }
 </header>
 
 <div class="app-wrap">
+  <!-- Sync Warning Banner -->
+  <div id="syncBanner" class="sync-banner" role="status" aria-live="polite" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    <span id="syncBannerText" class="sync-banner-text">Sincronizando dados do WhatsApp...</span>
+    <div class="sync-progress-bar" aria-hidden="true">
+      <div id="syncProgressFill" class="sync-progress-fill" style="width:0%"></div>
+    </div>
+  </div>
+
   <!-- Connection / QR Card -->
   <section id="statusCard" class="card status-hero" aria-label="Status da conexão">
     <div id="spinner" class="spinner" role="progressbar" aria-label="Carregando"></div>
@@ -1026,7 +1170,7 @@ tr:hover .copy-icon-btn { opacity: 1; }
     </aside>
 
     <!-- Right Column: Detail View -->
-    <main class="card detail-card" id="detailPanel" aria-label="Detalhes do grupo" id="main-content">
+    <main class="card detail-card" id="main-content" aria-label="Detalhes do grupo" tabindex="-1">
       <div id="emptyDetail" class="detail-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <p>Selecione um grupo ao lado para inspecionar e extrair os membros.</p>
@@ -1061,6 +1205,11 @@ tr:hover .copy-icon-btn { opacity: 1; }
             </button>
             <button class="btn sm" id="copyPhonesBtn">Copiar Telefones</button>
             <button class="btn sm" id="exportCsvBtn">CSV</button>
+            <label class="image-size-field" title="Tamanho das fotos embutidas no Excel">
+              <span>Foto no Excel</span>
+              <input type="number" id="imageSizeInput" value="100" min="20" max="500" step="10" aria-label="Tamanho da foto no Excel, em pixels">
+              <span>px</span>
+            </label>
             <button class="btn sm primary" id="exportExcelBtn">Excel</button>
             <button class="btn sm ghost" id="exportJsonBtn">JSON</button>
           </div>
@@ -1106,7 +1255,7 @@ tr:hover .copy-icon-btn { opacity: 1; }
             <thead>
               <tr>
                 <th style="width:44px;" scope="col">#</th>
-                <th style="width:56px; text-align:center;" scope="col">Foto</th>
+                <th id="thPhoto" class="photo-col" style="width:56px;" scope="col">Foto<span class="col-resize-handle" id="photoResizeHandle" aria-hidden="true"></span></th>
                 <th class="sortable" data-sort="name" scope="col">Nome <span class="sort-icon" id="sortIconName" aria-hidden="true">▲</span></th>
                 <th class="sortable" data-sort="phone" scope="col">Telefone <span class="sort-icon" id="sortIconPhone" aria-hidden="true"></span></th>
                 <th class="sortable" data-sort="admin" style="width:120px;" scope="col">Tipo <span class="sort-icon" id="sortIconAdmin" aria-hidden="true"></span></th>
@@ -1303,10 +1452,15 @@ async function fetchCurrentState() {
 function handleStateUpdate(s) {
   appState = s;
   const ready = s.status === 'ready';
+  const isSyncing = Boolean(s.syncProgress);
+  renderSyncState(s.syncProgress);
+  const groupsCount = s.groups ? s.groups.length : 0;
   const pill = $('statusPill');
   const pillText = $('statusPillText');
-  pill.className = 'pill ' + (ready ? 'ok' : s.status === 'error' ? 'err' : 'loading');
-  pillText.textContent = ready ? `${s.groups ? s.groups.length : 0} Grupos Prontos` : s.message;
+  pill.className = 'pill ' + (ready ? (isSyncing ? 'loading' : 'ok') : s.status === 'error' ? 'err' : 'loading');
+  pillText.textContent = ready
+    ? (isSyncing ? `${groupsCount} Grupos · Sincronizando...` : `${groupsCount} Grupos Prontos`)
+    : s.message;
   $('mainView').hidden = !ready;
   $('statusCard').hidden = ready;
   if (!ready) {
@@ -1320,6 +1474,29 @@ function handleStateUpdate(s) {
     $('retryBtn').hidden = s.status !== 'error';
   } else {
     renderGroupList();
+  }
+}
+
+/* Exportar durante a sincronização gera arquivos incompletos */
+const EXPORT_BUTTON_IDS = ['exportCsvBtn', 'exportExcelBtn', 'exportJsonBtn', 'copyPhonesBtn', 'startBatchBtn'];
+
+function renderSyncState(syncProgress) {
+  const isSyncing = Boolean(syncProgress);
+  $('syncBanner').hidden = !isSyncing;
+  if (isSyncing) {
+    $('syncBannerText').textContent = syncProgress.detail
+      ? `Sincronizando: ${syncProgress.detail}`
+      : 'Sincronizando dados do WhatsApp...';
+    const pct = typeof syncProgress.progress === 'number'
+      ? Math.min(100, Math.max(0, syncProgress.progress))
+      : 60;
+    $('syncProgressFill').style.width = `${pct}%`;
+  }
+  for (const id of EXPORT_BUTTON_IDS) {
+    const btn = $(id);
+    if (!btn) continue;
+    btn.disabled = isSyncing;
+    btn.title = isSyncing ? 'Aguarde a sincronização concluir para exportar dados completos' : '';
   }
 }
 
@@ -1521,24 +1698,19 @@ function renderTable() {
     tdIdx.style.color = 'hsl(var(--color-text-tertiary))';
     tdIdx.textContent = globalIdx;
     const tdPhoto = document.createElement('td');
-    tdPhoto.style.textAlign = 'center';
-    tdPhoto.style.width = '56px';
+    tdPhoto.className = 'photo-cell';
     if (p.photoUrl) {
-      const link = document.createElement('a');
-      link.href = p.photoUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.title = 'Clique para abrir foto em tamanho real';
-      link.style.display = 'inline-block';
+      const displayName = p.pushname || p.name || '';
       const img = document.createElement('img');
       img.src = p.photoUrl;
       img.className = 'member-avatar';
-      img.alt = p.pushname || p.name || 'Foto';
+      img.alt = displayName || 'Foto';
       img.loading = 'lazy';
       img.referrerPolicy = 'no-referrer';
-      img.onerror = () => { link.replaceWith(createFallbackAvatar(p.pushname || p.name)); };
-      link.appendChild(img);
-      tdPhoto.appendChild(link);
+      img.title = 'Clique para ver a foto ampliada';
+      img.onclick = (e) => { e.stopPropagation(); openPhotoPreview(p.photoUrl, displayName); };
+      img.onerror = () => { img.replaceWith(createFallbackAvatar(displayName)); };
+      tdPhoto.appendChild(img);
     } else {
       tdPhoto.appendChild(createFallbackAvatar(p.pushname || p.name));
     }
@@ -1732,10 +1904,85 @@ $('exportCsvBtn').onclick = () => {
   downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.csv`);
 };
 
+/* ========== EXCEL (.xlsx com fotos embutidas) ========== */
+const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const PX_TO_POINTS = 0.75;
+const PX_PER_EXCEL_CHAR = 7;
+
+function getExcelImageSize() {
+  const size = parseInt($('imageSizeInput').value, 10);
+  return Number.isFinite(size) ? Math.min(500, Math.max(20, size)) : 100;
+}
+
+function toExcelRow(p) {
+  const phone = cleanDigits(p.phone);
+  return {
+    preview: '',
+    nome_whatsapp: p.pushname || p.name || '',
+    nome_agenda: p.savedName || '',
+    telefone: phone ? '+' + phone : '',
+    admin: p.admin ? 'sim' : 'não',
+    status: p.hidden ? 'ID de privacidade (LID)' : 'Normal',
+  };
+}
+
+async function embedPhoto(workbook, worksheet, row, photoUrl, imgSize) {
+  if (!photoUrl) return;
+  try {
+    const response = await fetch(photoUrl);
+    const buffer = await response.arrayBuffer();
+    const imageId = workbook.addImage({ buffer, extension: 'jpeg' });
+    worksheet.addImage(imageId, { tl: { col: 0, row: row.number - 1 }, ext: { width: imgSize, height: imgSize } });
+  } catch (e) {
+    console.warn('Falha ao carregar imagem:', e);
+  }
+}
+
+async function buildContactsWorkbook(sheetName, rows, withGroupColumn) {
+  const imgSize = getExcelImageSize();
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName.substring(0, 31) || 'Contatos');
+  worksheet.columns = [
+    { header: 'Preview', key: 'preview', width: Math.max(10, Math.round(imgSize / PX_PER_EXCEL_CHAR)) },
+    ...(withGroupColumn ? [{ header: 'Grupo Origem', key: 'grupo_origem', width: 25 }] : []),
+    { header: 'Nome WhatsApp', key: 'nome_whatsapp', width: 25 },
+    { header: 'Nome Agenda', key: 'nome_agenda', width: 25 },
+    { header: 'Telefone', key: 'telefone', width: 18 },
+    { header: 'Admin', key: 'admin', width: 8 },
+    { header: 'Status', key: 'status', width: 20 },
+  ];
+  for (const { participant, groupName } of rows) {
+    const values = toExcelRow(participant);
+    if (withGroupColumn) values.grupo_origem = groupName || '';
+    const row = worksheet.addRow(values);
+    row.height = Math.round(imgSize * PX_TO_POINTS) + 4;
+    await embedPhoto(workbook, worksheet, row, participant.photoUrl, imgSize);
+  }
+  return new Blob([await workbook.xlsx.writeBuffer()], { type: EXCEL_MIME });
+}
+
+async function runExcelExport(button, build) {
+  if (typeof ExcelJS === 'undefined') { showToast('Biblioteca do Excel não carregou. Recarregue a página.', 'error'); return; }
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Gerando...';
+  try {
+    await build();
+  } catch (err) {
+    showToast(`Erro ao gerar Excel: ${err.message}`, 'error');
+  } finally {
+    button.textContent = label;
+    button.disabled = Boolean(appState.syncProgress) && EXPORT_BUTTON_IDS.includes(button.id);
+  }
+}
+
 $('exportExcelBtn').onclick = () => {
   if (!activeGroup || !activeGroup.participants) return;
-  const xml = generateExcelXml([{ groupName: activeGroup.name, participants: activeGroup.participants }]);
-  downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.xls`);
+  runExcelExport($('exportExcelBtn'), async () => {
+    const rows = activeGroup.participants.map((participant) => ({ participant }));
+    const blob = await buildContactsWorkbook(activeGroup.name || 'Grupo', rows, false);
+    downloadBlob(blob, `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.xlsx`);
+  });
 };
 
 $('exportJsonBtn').onclick = () => {
@@ -1760,83 +2007,88 @@ $('batchDownloadCsvBtn').onclick = () => {
 };
 
 $('batchDownloadExcelBtn').onclick = () => {
-  const deduplicate = $('batchDeduplicateCheck').checked;
-  const seenPhones = new Set();
-  const flatGroups = [{ groupName: 'Consolidado', participants: [] }];
-  batchResults.forEach((g) => { (g.participants || []).forEach((p) => { const phone = cleanDigits(p.phone); if (deduplicate && phone && !p.hidden) { if (seenPhones.has(phone)) return; seenPhones.add(phone); } flatGroups[0].participants.push({ groupName: g.name, name: p.name, pushname: p.pushname, savedName: p.savedName, phone: p.phone, admin: p.admin, hidden: p.hidden, photoUrl: p.photoUrl || '' }); }); });
-  const xml = generateExcelXml(flatGroups, true);
-  downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), `extracao_consolidada_${Date.now()}.xls`);
+  runExcelExport($('batchDownloadExcelBtn'), async () => {
+    const deduplicate = $('batchDeduplicateCheck').checked;
+    const seenPhones = new Set();
+    const rows = [];
+    for (const g of batchResults) {
+      for (const p of (g.participants || [])) {
+        const phone = cleanDigits(p.phone);
+        if (deduplicate && phone && !p.hidden) {
+          if (seenPhones.has(phone)) continue;
+          seenPhones.add(phone);
+        }
+        rows.push({ participant: p, groupName: g.name });
+      }
+    }
+    const blob = await buildContactsWorkbook('Consolidado', rows, true);
+    downloadBlob(blob, `extracao_consolidada_${Date.now()}.xlsx`);
+  });
 };
 
-function generateExcelXml(groupsList, includeGroupColumn = false) {
-  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  let columnsXml = '';
-  if (includeGroupColumn) columnsXml += '    <Column ss:Width="150"/>\n';
-  columnsXml += '    <Column ss:Width="65"/>\n';
-  columnsXml += '    <Column ss:Width="150"/>\n';
-  columnsXml += '    <Column ss:Width="130"/>\n';
-  columnsXml += '    <Column ss:Width="120"/>\n';
-  columnsXml += '    <Column ss:Width="60"/>\n';
-  columnsXml += '    <Column ss:Width="120"/>\n';
-  columnsXml += '    <Column ss:Width="95"/>\n';
-  let rowsXml = '';
-  rowsXml += '    <Row ss:StyleID="Header" ss:Height="24">\n';
-  if (includeGroupColumn) rowsXml += '      <Cell><Data ss:Type="String">Grupo</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Preview Foto</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Nome WhatsApp</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Nome Agenda</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Telefone</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Admin</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Status</Data></Cell>\n';
-  rowsXml += '      <Cell><Data ss:Type="String">Link Foto</Data></Cell>\n';
-  rowsXml += '    </Row>\n';
-  groupsList.forEach((grp) => {
-    (grp.participants || []).forEach((p) => {
-      const phone = p.phone ? '+' + cleanDigits(p.phone) : '';
-      const admin = p.admin ? 'Sim' : 'Não';
-      const status = p.hidden ? 'LID' : 'Normal';
-      const whatsName = p.pushname || p.name || '';
-      const savedName = p.savedName || '';
-      const photoUrl = p.photoUrl || '';
-      const hasPhoto = Boolean(photoUrl);
-      rowsXml += `    <Row ss:Height="${hasPhoto ? '46' : '22'}">\n`;
-      if (includeGroupColumn) rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(p.groupName || grp.groupName)}</Data></Cell>\n`;
-      if (hasPhoto) {
-        rowsXml += `      <Cell ss:StyleID="PreviewCell" ss:Formula="=IMAGE(&quot;${esc(photoUrl)}&quot;)" ss:HRef="${esc(photoUrl)}"><Data ss:Type="String">${esc(photoUrl)}</Data></Cell>\n`;
-      } else {
-        rowsXml += `      <Cell ss:StyleID="PreviewCell"><Data ss:Type="String">-</Data></Cell>\n`;
-      }
-      rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(whatsName)}</Data></Cell>\n`;
-      rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(savedName)}</Data></Cell>\n`;
-      rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(phone)}</Data></Cell>\n`;
-      rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(admin)}</Data></Cell>\n`;
-      rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(status)}</Data></Cell>\n`;
-      if (hasPhoto) {
-        rowsXml += `      <Cell ss:StyleID="LinkCell" ss:HRef="${esc(photoUrl)}"><Data ss:Type="String">Ver Foto</Data></Cell>\n`;
-      } else {
-        rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">-</Data></Cell>\n`;
-      }
-      rowsXml += '    </Row>\n';
-    });
-  });
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Styles>
-  <Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#4A6FA5" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="PreviewCell"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="LinkCell"><Font ss:Color="#4A6FA5" ss:Underline="Single"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
-  <Style ss:ID="RegularCell"><Alignment ss:Vertical="Center"/></Style>
- </Styles>
- <Worksheet ss:Name="Contatos">
-  <Table>
-${columnsXml}${rowsXml}  </Table>
- </Worksheet>
-</Workbook>`;
+/* ========== PHOTO PREVIEW MODAL ========== */
+function openPhotoPreview(url, name) {
+  const overlay = document.createElement('div');
+  overlay.className = 'photo-modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', name ? `Foto de ${name}` : 'Foto de perfil');
+
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  overlay.onclick = close;
+
+  const img = document.createElement('img');
+  img.src = url;
+  img.className = 'photo-modal-img';
+  img.alt = name || 'Foto de perfil';
+  img.referrerPolicy = 'no-referrer';
+  img.onclick = (e) => e.stopPropagation();
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'photo-modal-close';
+  closeBtn.setAttribute('aria-label', 'Fechar foto');
+  closeBtn.innerHTML = ICONS.x;
+  closeBtn.onclick = (e) => { e.stopPropagation(); close(); };
+
+  overlay.append(img, closeBtn);
+  if (name) {
+    const label = document.createElement('div');
+    label.className = 'photo-modal-name';
+    label.textContent = name;
+    overlay.appendChild(label);
+  }
+  document.body.appendChild(overlay);
+  document.addEventListener('keydown', onKey);
+  closeBtn.focus();
 }
+
+/* ========== PHOTO COLUMN RESIZE ========== */
+(function initPhotoColResize() {
+  const handle = $('photoResizeHandle');
+  const th = $('thPhoto');
+  if (!handle || !th) return;
+  handle.addEventListener('click', (e) => e.stopPropagation());
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.pageX;
+    const startWidth = th.offsetWidth;
+    handle.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMove = (ev) => { th.style.width = `${Math.max(44, startWidth + ev.pageX - startX)}px`; };
+    const onUp = () => {
+      handle.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
 
 /* ========== ACTION BUTTONS ========== */
 $('retryBtn').onclick = () => fetch('/api/retry-groups', { method: 'POST' });
