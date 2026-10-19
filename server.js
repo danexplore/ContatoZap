@@ -46,6 +46,21 @@ async function discardDeadSession(c) {
   }
 }
 
+// Chrome do sistema, se instalado; senão o puppeteer usa o Chrome que baixa no npm install.
+function systemChromeCandidates() {
+  if (process.platform === 'win32') {
+    const roots = [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA];
+    return roots.filter(Boolean).map((root) => path.join(root, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+  }
+  if (process.platform === 'darwin') return ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'];
+  return ['/opt/google/chrome/chrome'];
+}
+
+function resolveChromePath() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
+  return systemChromeCandidates().find((candidate) => fs.existsSync(candidate));
+}
+
 // Chromes de execuções anteriores que ficaram abertos (servidor morto sem fechar o navegador)
 // continuam usando a sessão e derrubam a conexão nova. No Windows isso acontece a cada
 // reinício do `npm run watch`, que encerra o servidor sem dar chance de fechar o Chrome.
@@ -273,7 +288,7 @@ async function startClient(retry = 0) {
     },
     puppeteer: {
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/opt/google/chrome/chrome',
+      executablePath: resolveChromePath(),
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
