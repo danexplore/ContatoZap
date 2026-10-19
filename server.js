@@ -6,10 +6,11 @@ const { exec, execFile } = require('child_process');
 const QRCode = require('qrcode');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const { SqliteStore } = require('./sqlite-store');
-const { listGroups, getGroupParticipants } = require('./whatsapp-extractor');
+const { listGroups, getGroupParticipants, getGroupPhoto } = require('./whatsapp-extractor');
 const log = require('./logger');
 const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
 const { urlLocal } = require('./lib/url-local');
+const { criarCacheFotos, lerIdsFotos } = require('./lib/fotos-grupos');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = process.env.HOST || '127.0.0.1'; // apenas local
@@ -118,6 +119,7 @@ let client = null;
 let loadingGroups = false;
 let clientReady = false;
 const participantsCache = new Map(); // id -> { data, timestamp }
+const cacheFotos = criarCacheFotos({ buscar: (id) => getGroupPhoto(client, id) });
 const sseClients = new Set();
 let currentBatch = null; // { cancelRequested: boolean }
 
@@ -614,7 +616,8 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/api/clear-cache') {
       participantsCache.clear();
-      log.info('CACHE', 'Cache de participantes limpo por solicitação do usuário.');
+      cacheFotos.limpar();
+      log.info('CACHE', 'Cache de participantes e de fotos dos grupos limpo por solicitação do usuário.');
       sendJson(res, 200, { ok: true, message: 'Cache limpo com sucesso.' });
       return logDone(200);
     }
@@ -637,6 +640,20 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && (url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/'))) {
       await servirArquivoPublico(res, RAIZ_PUBLICA, url.pathname);
       return logDone(res.statusCode);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/group-photos') {
+      if (!client || state.status !== 'ready') {
+        sendJson(res, 503, { error: 'O WhatsApp ainda não está conectado.' });
+        return logDone(503);
+      }
+      const lidos = lerIdsFotos(url.searchParams.get('ids'));
+      if (lidos.erro) {
+        sendJson(res, 400, { error: lidos.erro });
+        return logDone(400);
+      }
+      sendJson(res, 200, await cacheFotos.obter(lidos.ids));
+      return logDone(200);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/group') {
