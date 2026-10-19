@@ -1,18 +1,14 @@
 // Estado da conexão com o WhatsApp: pílula de status, QR, erro e banner de sincronização.
 import { $ } from './ui.js';
 import { recarregarGrupos, reiniciarConexao } from './api.js';
-import { renderizarSidebar } from './sidebar.js';
+import { aoMudar, obterEstado } from './estado.js';
 
-let estadoServidor = { status: 'starting', message: '', qr: null, groups: [], error: null };
-
-export const obterEstadoServidor = () => estadoServidor;
-export const estaSincronizando = () => Boolean(estadoServidor.syncProgress);
+export const estaSincronizando = () => Boolean(obterEstado().conexao.syncProgress);
 
 /* Exportar durante a sincronização gera arquivos incompletos */
 export const BOTOES_EXPORTACAO = ['exportCsvBtn', 'exportExcelBtn', 'exportJsonBtn', 'copyPhonesBtn', 'startBatchBtn'];
 
-export function aplicarEstadoConexao(s) {
-  estadoServidor = s;
+function renderizarConexao(s) {
   const pronto = s.status === 'ready';
   const sincronizando = Boolean(s.syncProgress);
   renderizarSincronizacao(s.syncProgress);
@@ -34,8 +30,6 @@ export function aplicarEstadoConexao(s) {
     $('errorBox').hidden = !s.error;
     $('errorBox').textContent = s.error || '';
     $('retryBtn').hidden = s.status !== 'error';
-  } else {
-    renderizarSidebar();
   }
 }
 
@@ -60,6 +54,7 @@ function renderizarSincronizacao(syncProgress) {
 }
 
 export function iniciarConexao() {
+  aoMudar((estado, chaves) => { if (chaves.includes('conexao')) renderizarConexao(estado.conexao); });
   $('retryBtn').addEventListener('click', () => recarregarGrupos());
   $('restartBtn').addEventListener('click', () => reiniciarConexao());
   $('restartHeroBtn').addEventListener('click', () => reiniciarConexao());

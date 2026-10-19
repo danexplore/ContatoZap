@@ -1,18 +1,22 @@
 // Lista de grupos à esquerda: filtro por nome, abrir grupo e seleção para extração em lote.
 import { $, mostrarAviso } from './ui.js';
 import { iniciarLote, recarregarGrupos } from './api.js';
-import { obterEstadoServidor } from './conexao.js';
-import { abrirGrupo, obterGrupoAtivo } from './grupo.js';
+import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
+import { abrirGrupo } from './grupo.js';
 import { filtrarGrupos } from './logica/filtros.js';
 
-const gruposSelecionados = new Set();
+// Lista e grupo ativo pedem redesenho; seleção só marca as caixas, sem tirar o foco do teclado.
+const CHAVES_REDESENHO = ['conexao', 'abaAtiva'];
 
-export function renderizarSidebar() {
+const gruposDoServidor = () => obterEstado().conexao.groups || [];
+
+function renderizarSidebar() {
   const lista = $('groupList');
   const termo = $('groupSearch').value;
-  const grupos = obterEstadoServidor().groups || [];
-  const grupoAtivo = obterGrupoAtivo();
+  const grupos = gruposDoServidor();
+  const { abaAtiva, selecionados } = obterEstado();
   $('totalGroupsCount').textContent = grupos.length;
+  atualizarContadorSelecionados();
   const filtrados = filtrarGrupos(grupos, termo);
   lista.replaceChildren();
   if (!filtrados.length) {
@@ -25,8 +29,8 @@ export function renderizarSidebar() {
     return;
   }
   for (const g of filtrados) {
-    const selecionado = gruposSelecionados.has(g.id);
-    const ativo = grupoAtivo && grupoAtivo.id === g.id;
+    const selecionado = selecionados.has(g.id);
+    const ativo = abaAtiva === g.id;
     const li = document.createElement('li');
     li.className = `group-item ${ativo ? 'active' : ''}`;
     li.setAttribute('role', 'option');
@@ -35,6 +39,7 @@ export function renderizarSidebar() {
     const caixa = document.createElement('input');
     caixa.type = 'checkbox';
     caixa.checked = selecionado;
+    caixa.dataset.grupo = g.id;
     caixa.setAttribute('aria-label', `Selecionar grupo ${g.name || '(Sem nome)'}`);
     caixa.addEventListener('click', (e) => { e.stopPropagation(); alternarSelecao(g.id, caixa.checked); });
 
@@ -60,36 +65,51 @@ export function renderizarSidebar() {
     li.append(caixa, info, selo);
     lista.appendChild(li);
   }
+}
+
+function sincronizarSelecao() {
+  const { selecionados } = obterEstado();
+  for (const caixa of $('groupList').querySelectorAll('input[type="checkbox"][data-grupo]')) {
+    caixa.checked = selecionados.has(caixa.dataset.grupo);
+  }
   atualizarContadorSelecionados();
 }
 
 function alternarSelecao(id, marcado) {
-  if (marcado) gruposSelecionados.add(id); else gruposSelecionados.delete(id);
-  atualizarContadorSelecionados();
+  const selecionados = new Set(obterEstado().selecionados);
+  if (marcado) selecionados.add(id); else selecionados.delete(id);
+  atualizarEstado({ selecionados });
 }
 
 function atualizarContadorSelecionados() {
-  const total = gruposSelecionados.size;
+  const total = obterEstado().selecionados.size;
   $('selectedCount').textContent = total;
   $('batchSidebarBar').hidden = total === 0;
   $('batchSidebarText').textContent = `${total} grupo(s)`;
 }
 
 export function atualizarTamanhoGrupo(id, total) {
-  const g = (obterEstadoServidor().groups || []).find((x) => x.id === id);
-  if (g) { g.size = total; renderizarSidebar(); }
+  const { conexao } = obterEstado();
+  const grupos = conexao.groups || [];
+  if (!grupos.some((g) => g.id === id)) return;
+  atualizarEstado({ conexao: { ...conexao, groups: grupos.map((g) => (g.id === id ? { ...g, size: total } : g)) } });
 }
 
 function extrairSelecionados() {
-  if (gruposSelecionados.size === 0) return;
-  const ids = Array.from(gruposSelecionados);
+  const { selecionados } = obterEstado();
+  if (selecionados.size === 0) return;
+  const ids = Array.from(selecionados);
   const fotos = Boolean($('batchPhotosCheck') && $('batchPhotosCheck').checked);
   iniciarLote(ids, fotos).catch((err) => mostrarAviso(`Erro ao iniciar lote: ${err.message}`, 'error'));
 }
 
 export function iniciarSidebar() {
-  $('selectAllBtn').addEventListener('click', () => { (obterEstadoServidor().groups || []).forEach((g) => gruposSelecionados.add(g.id)); renderizarSidebar(); });
-  $('clearSelectionBtn').addEventListener('click', () => { gruposSelecionados.clear(); renderizarSidebar(); });
+  aoMudar((_, chaves) => {
+    if (chaves.some((c) => CHAVES_REDESENHO.includes(c))) renderizarSidebar();
+    else if (chaves.includes('selecionados')) sincronizarSelecao();
+  });
+  $('selectAllBtn').addEventListener('click', () => atualizarEstado({ selecionados: new Set(gruposDoServidor().map((g) => g.id)) }));
+  $('clearSelectionBtn').addEventListener('click', () => atualizarEstado({ selecionados: new Set() }));
   $('groupSearch').addEventListener('input', renderizarSidebar);
   $('refreshGroupsBtn').addEventListener('click', () => recarregarGrupos());
   $('startBatchBtn').addEventListener('click', extrairSelecionados);

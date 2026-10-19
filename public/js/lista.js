@@ -1,5 +1,6 @@
 // Tabela de participantes do grupo aberto: filtro por abas, busca, ordenação, paginação e coluna Foto.
 import { $, ICONES, copiarTexto, abrirPreviewFoto } from './ui.js';
+import { aoMudar, atualizarVisao, obterEstado, visaoDoGrupo } from './estado.js';
 import { obterGrupoAtivo } from './grupo.js';
 import { apenasDigitos, formatarTelefone } from './logica/texto.js';
 import { filtrarParticipantes, linhaExportacao, ordenarParticipantes } from './logica/filtros.js';
@@ -7,13 +8,13 @@ import { filtrarParticipantes, linhaExportacao, ordenarParticipantes } from './l
 // Mesmas colunas do Excel, mais # e Foto
 const COLUNAS_TABELA = 7;
 
-let filtroAtivo = 'todos';
-let termoBusca = '';
-// null = ordem original do grupo, a mesma do Excel
-let colunaOrdem = null;
-let ordemCrescente = true;
+const CHAVES_LISTA = ['abaAtiva', 'grupos', 'visoes'];
+
+// Paginação é só desta tabela; filtro, busca e ordenação ficam na visão do grupo (estado.js).
 let paginaAtual = 1;
 let tamanhoPagina = 50;
+// Grupo + filtro + busca da última renderização: se mudar, volta à primeira página
+let ultimaConsulta = '';
 
 function criarAvatarReserva(nome) {
   const el = document.createElement('span');
@@ -38,11 +39,11 @@ function criarSelo(texto, variante) {
   return selo;
 }
 
-function membrosFiltradosEOrdenados() {
+function membrosFiltradosEOrdenados(visao) {
   const grupo = obterGrupoAtivo();
   if (!grupo || !grupo.participants) return [];
-  const filtrados = filtrarParticipantes(grupo.participants, { filtro: filtroAtivo, busca: termoBusca });
-  return ordenarParticipantes(filtrados, colunaOrdem, ordemCrescente);
+  const filtrados = filtrarParticipantes(grupo.participants, { filtro: visao.filtro, busca: visao.busca });
+  return ordenarParticipantes(filtrados, visao.ordenacao.coluna, visao.ordenacao.asc);
 }
 
 function criarCelulaFoto(p) {
@@ -86,9 +87,26 @@ function criarCelulaTelefone(p) {
   return td;
 }
 
-export function renderizarLista({ primeiraPagina = false } = {}) {
-  if (primeiraPagina) paginaAtual = 1;
-  const lista = membrosFiltradosEOrdenados();
+// Abas de filtro, campo de busca e setas de ordenação refletem a visão do grupo aberto.
+function sincronizarControles(visao) {
+  document.querySelectorAll('.filter-tab').forEach((botao) => {
+    const ativo = botao.dataset.filter === visao.filtro;
+    botao.classList.toggle('active', ativo);
+    botao.setAttribute('aria-selected', ativo ? 'true' : 'false');
+  });
+  const busca = $('memberSearch');
+  if (busca.value.trim() !== visao.busca) busca.value = visao.busca;
+  atualizarIconesOrdem(visao.ordenacao);
+}
+
+function renderizarLista({ primeiraPagina = false } = {}) {
+  const { abaAtiva } = obterEstado();
+  const visao = visaoDoGrupo(abaAtiva);
+  const consulta = JSON.stringify([abaAtiva, visao.filtro, visao.busca]);
+  if (primeiraPagina || consulta !== ultimaConsulta) paginaAtual = 1;
+  ultimaConsulta = consulta;
+  sincronizarControles(visao);
+  const lista = membrosFiltradosEOrdenados(visao);
   const tbody = $('membersTbody');
   tbody.replaceChildren();
   const total = lista.length;
@@ -133,36 +151,38 @@ export function renderizarLista({ primeiraPagina = false } = {}) {
   });
 }
 
-function atualizarIconesOrdem() {
+function atualizarIconesOrdem({ coluna, asc }) {
   document.querySelectorAll('th.sortable').forEach((th) => {
-    const ativa = th.dataset.sort === colunaOrdem;
-    th.querySelector('.sort-icon').textContent = ativa ? (ordemCrescente ? '▲' : '▼') : '';
-    th.setAttribute('aria-sort', ativa ? (ordemCrescente ? 'ascending' : 'descending') : 'none');
+    const ativa = th.dataset.sort === coluna;
+    th.querySelector('.sort-icon').textContent = ativa ? (asc ? '▲' : '▼') : '';
+    th.setAttribute('aria-sort', ativa ? (asc ? 'ascending' : 'descending') : 'none');
   });
 }
 
+function atualizarVisaoAtiva(patch) {
+  const { abaAtiva } = obterEstado();
+  if (abaAtiva) atualizarVisao(abaAtiva, patch);
+}
+
 export function iniciarLista() {
+  aoMudar((_, chaves) => { if (chaves.some((c) => CHAVES_LISTA.includes(c))) renderizarLista(); });
+
   document.querySelectorAll('.filter-tab').forEach((botao) => {
-    botao.addEventListener('click', () => {
-      document.querySelectorAll('.filter-tab').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
-      botao.classList.add('active');
-      botao.setAttribute('aria-selected', 'true');
-      filtroAtivo = botao.dataset.filter;
-      renderizarLista({ primeiraPagina: true });
-    });
+    botao.addEventListener('click', () => atualizarVisaoAtiva({ filtro: botao.dataset.filter }));
   });
 
-  $('memberSearch').addEventListener('input', (e) => { termoBusca = e.target.value.trim(); renderizarLista({ primeiraPagina: true }); });
+  $('memberSearch').addEventListener('input', (e) => atualizarVisaoAtiva({ busca: e.target.value.trim() }));
 
   document.querySelectorAll('th.sortable').forEach((th) => {
     th.addEventListener('click', () => {
       const coluna = th.dataset.sort;
+      const atual = visaoDoGrupo(obterEstado().abaAtiva).ordenacao;
       // Crescente → decrescente → ordem original (a do Excel)
-      if (colunaOrdem !== coluna) { colunaOrdem = coluna; ordemCrescente = true; }
-      else if (ordemCrescente) ordemCrescente = false;
-      else colunaOrdem = null;
-      atualizarIconesOrdem();
-      renderizarLista();
+      let ordenacao;
+      if (atual.coluna !== coluna) ordenacao = { coluna, asc: true };
+      else if (atual.asc) ordenacao = { coluna, asc: false };
+      else ordenacao = { coluna: null, asc: true };
+      atualizarVisaoAtiva({ ordenacao });
     });
   });
 

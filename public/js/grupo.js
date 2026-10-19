@@ -1,57 +1,82 @@
 // Grupo aberto: carregamento (com cache no navegador), cabeçalho, métricas e ações de exportação.
 import { $, mostrarAviso } from './ui.js';
 import { buscarGrupo } from './api.js';
-import { renderizarSidebar, atualizarTamanhoGrupo } from './sidebar.js';
-import { renderizarLista } from './lista.js';
+import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
+import { atualizarTamanhoGrupo } from './sidebar.js';
 import { copiarTelefones, exportarCsv, exportarExcel, exportarJson } from './exportar.js';
 import { contarFiltros } from './logica/filtros.js';
 
-// null | { id, name } enquanto carrega | GrupoExtraido
-let grupoAtivo = null;
-// `${id}:basic|with_photos` -> GrupoExtraido
+const CHAVES_GRUPO = ['abaAtiva', 'grupos'];
+
+// `${id}:basic|with_photos` -> GrupoExtraido (memória das respostas da API, não é estado de tela)
 const cacheCliente = new Map();
 
-export const obterGrupoAtivo = () => grupoAtivo;
+// Dados do grupo ativo já carregado, ou null enquanto carrega / sem grupo / com erro.
+export function obterGrupoAtivo() {
+  const { abaAtiva, grupos } = obterEstado();
+  const entrada = abaAtiva ? grupos.get(abaAtiva) : null;
+  return entrada && entrada.status === 'pronto' ? entrada.dados : null;
+}
 
-function querFotos() {
-  return Boolean($('fetchPhotosCheckbox') && $('fetchPhotosCheckbox').checked);
+function nomeDoGrupo(id) {
+  const g = (obterEstado().conexao.groups || []).find((x) => x.id === id);
+  return g ? g.name : '';
+}
+
+function comEntrada(id, entrada) {
+  const grupos = new Map(obterEstado().grupos);
+  grupos.set(id, entrada);
+  return grupos;
 }
 
 export async function abrirGrupo(g, { atualizar = false } = {}) {
-  grupoAtivo = { id: g.id, name: g.name };
-  renderizarSidebar();
-  $('emptyDetail').hidden = true;
-  $('activeGroupView').hidden = true;
-  $('loadingDetail').hidden = false;
-  const fotos = querFotos();
-  $('loadingDetailMsg').textContent = fotos ? `Carregando membros e fotos de "${g.name}"...` : `Carregando membros de "${g.name}"...`;
+  const fotos = obterEstado().buscarFotos;
   const chave = `${g.id}:${fotos ? 'with_photos' : 'basic'}`;
   if (!atualizar) {
-    if (cacheCliente.has(chave)) { grupoAtivo = cacheCliente.get(chave); renderizarGrupoAtivo(); return; }
-    if (!fotos && cacheCliente.has(`${g.id}:with_photos`)) { grupoAtivo = cacheCliente.get(`${g.id}:with_photos`); renderizarGrupoAtivo(); return; }
+    const emCache = cacheCliente.get(chave) || (!fotos && cacheCliente.get(`${g.id}:with_photos`));
+    if (emCache) {
+      atualizarEstado({ abaAtiva: g.id, grupos: comEntrada(g.id, { status: 'pronto', dados: emCache }) });
+      return;
+    }
   }
+  atualizarEstado({ abaAtiva: g.id, grupos: comEntrada(g.id, { status: 'carregando' }) });
   try {
     const data = await buscarGrupo(g.id, { atualizar, fotos });
     cacheCliente.set(chave, data);
     if (fotos) cacheCliente.set(`${g.id}:basic`, data);
+    atualizarEstado({ grupos: comEntrada(g.id, { status: 'pronto', dados: data }) });
     atualizarTamanhoGrupo(g.id, data.participants.length);
-    if (grupoAtivo && grupoAtivo.id === g.id) { grupoAtivo = data; renderizarGrupoAtivo(); }
   } catch (err) {
-    $('loadingDetail').hidden = true;
+    atualizarEstado({ grupos: comEntrada(g.id, { status: 'erro', erro: err.message }) });
     mostrarAviso(`Erro ao extrair grupo: ${err.message}`, 'error', 4500);
-    $('emptyDetail').hidden = false;
   }
 }
 
-export function renderizarGrupoAtivo() {
+function mostrarCarregando(id) {
+  $('emptyDetail').hidden = true;
+  $('activeGroupView').hidden = true;
+  $('loadingDetail').hidden = false;
+  const nome = nomeDoGrupo(id);
+  $('loadingDetailMsg').textContent = obterEstado().buscarFotos
+    ? `Carregando membros e fotos de "${nome}"...`
+    : `Carregando membros de "${nome}"...`;
+}
+
+function mostrarVazio() {
+  $('loadingDetail').hidden = true;
+  $('activeGroupView').hidden = true;
+  $('emptyDetail').hidden = false;
+}
+
+function mostrarGrupo(grupo) {
   $('loadingDetail').hidden = true;
   $('emptyDetail').hidden = true;
   $('activeGroupView').hidden = false;
-  $('activeGroupName').textContent = grupoAtivo.name;
-  const lista = grupoAtivo.participants || [];
+  $('activeGroupName').textContent = grupo.name;
+  const lista = grupo.participants || [];
   const comFoto = lista.filter((p) => Boolean(p.photoUrl)).length;
   $('activeGroupCount').textContent = comFoto > 0 ? `${lista.length} participante(s) · ${comFoto} com foto` : `${lista.length} participante(s)`;
-  $('activeGroupDuration').textContent = grupoAtivo.durationSec ? `${grupoAtivo.durationSec}s` : 'Cache';
+  $('activeGroupDuration').textContent = grupo.durationSec ? `${grupo.durationSec}s` : 'Cache';
   const contagem = contarFiltros(lista);
   $('metricTotal').textContent = contagem.todos;
   $('metricPhones').textContent = contagem.telefone;
@@ -61,27 +86,53 @@ export function renderizarGrupoAtivo() {
   $('tabCountPhones').textContent = contagem.telefone;
   $('tabCountAdmins').textContent = contagem.admins;
   $('tabCountHidden').textContent = contagem.privados;
-  renderizarLista({ primeiraPagina: true });
+}
+
+function renderizarGrupo() {
+  const { abaAtiva, grupos } = obterEstado();
+  const entrada = abaAtiva ? grupos.get(abaAtiva) : null;
+  if (!entrada || entrada.status === 'erro') mostrarVazio();
+  else if (entrada.status === 'carregando') mostrarCarregando(abaAtiva);
+  else mostrarGrupo(entrada.dados);
 }
 
 function comParticipantes(acao) {
-  return () => { if (grupoAtivo && grupoAtivo.participants) acao(grupoAtivo); };
+  return () => { const grupo = obterGrupoAtivo(); if (grupo && grupo.participants) acao(grupo); };
+}
+
+function recarregarAtivo() {
+  const { abaAtiva } = obterEstado();
+  if (abaAtiva) abrirGrupo({ id: abaAtiva }, { atualizar: true });
+}
+
+function iniciarPreferenciasDoGrupo() {
+  const caixaFotos = $('fetchPhotosCheckbox');
+  if (caixaFotos) {
+    caixaFotos.checked = obterEstado().buscarFotos;
+    caixaFotos.addEventListener('change', (e) => {
+      atualizarEstado({ buscarFotos: e.target.checked });
+      recarregarAtivo();
+    });
+  }
+
+  const campoFotoExcel = $('imageSizeInput');
+  if (campoFotoExcel) {
+    campoFotoExcel.value = obterEstado().tamanhoFotoExcel;
+    campoFotoExcel.addEventListener('change', () => {
+      const tamanho = parseInt(campoFotoExcel.value, 10);
+      const valido = Number.isFinite(tamanho) ? Math.min(500, Math.max(20, tamanho)) : obterEstado().tamanhoFotoExcel;
+      campoFotoExcel.value = valido;
+      atualizarEstado({ tamanhoFotoExcel: valido });
+    });
+  }
 }
 
 export function iniciarGrupo() {
-  $('refreshActiveGroupBtn').addEventListener('click', () => { if (grupoAtivo) abrirGrupo(grupoAtivo, { atualizar: true }); });
+  aoMudar((_, chaves) => { if (chaves.some((c) => CHAVES_GRUPO.includes(c))) renderizarGrupo(); });
+  $('refreshActiveGroupBtn').addEventListener('click', recarregarAtivo);
   $('copyPhonesBtn').addEventListener('click', comParticipantes(copiarTelefones));
   $('exportCsvBtn').addEventListener('click', comParticipantes(exportarCsv));
   $('exportExcelBtn').addEventListener('click', comParticipantes((g) => exportarExcel(g, $('exportExcelBtn'))));
-  $('exportJsonBtn').addEventListener('click', () => { if (grupoAtivo) exportarJson(grupoAtivo); });
-
-  const caixaFotos = $('fetchPhotosCheckbox');
-  if (caixaFotos) {
-    const preferencia = localStorage.getItem('contatozap_fetch_photos');
-    if (preferencia !== null) caixaFotos.checked = preferencia === '1';
-    caixaFotos.addEventListener('change', (e) => {
-      localStorage.setItem('contatozap_fetch_photos', e.target.checked ? '1' : '0');
-      if (grupoAtivo && grupoAtivo.id) abrirGrupo(grupoAtivo, { atualizar: true });
-    });
-  }
+  $('exportJsonBtn').addEventListener('click', () => { const grupo = obterGrupoAtivo(); if (grupo) exportarJson(grupo); });
+  iniciarPreferenciasDoGrupo();
 }

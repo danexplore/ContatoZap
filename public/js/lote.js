@@ -3,11 +3,12 @@ import { $, baixarArquivo, copiarTexto, mostrarAviso } from './ui.js';
 import { cancelarLote } from './api.js';
 import { executarExportacaoExcel, gerarCsv, montarPlanilha } from './exportar.js';
 import { apenasDigitos } from './logica/texto.js';
+import { atualizarEstado, obterEstado } from './estado.js';
 
-let resultadosLote = [];
+const resultadosLote = () => obterEstado().lote.resultados;
 
 export function abrirLote(total) {
-  resultadosLote = [];
+  atualizarEstado({ lote: { ativo: true, resultados: [] } });
   $('batchDrawer').hidden = false;
   $('batchTitle').textContent = `Extraindo ${total} Grupos`;
   $('batchPercentage').textContent = '0%';
@@ -31,13 +32,13 @@ export function atualizarLote(dados) {
 }
 
 export function finalizarLote(resultados, cancelado = false) {
-  resultadosLote = resultados || [];
+  atualizarEstado({ lote: { ativo: false, resultados: resultados || [] } });
   $('batchProgressFill').style.width = '100%';
   $('batchPercentage').textContent = '100%';
   $('batchCurrentGroupText').textContent = cancelado ? 'Lote cancelado' : 'Concluído!';
   let totalContatos = 0;
   const telefonesUnicos = new Set();
-  resultadosLote.forEach((g) => { (g.participants || []).forEach((p) => { totalContatos++; if (p.phone && !p.hidden) telefonesUnicos.add(apenasDigitos(p.phone)); }); });
+  resultadosLote().forEach((g) => { (g.participants || []).forEach((p) => { totalContatos++; if (p.phone && !p.hidden) telefonesUnicos.add(apenasDigitos(p.phone)); }); });
   $('batchSummaryTotal').textContent = totalContatos;
   $('batchSummaryUnique').textContent = telefonesUnicos.size;
   $('batchCompletedSummary').hidden = false;
@@ -53,7 +54,7 @@ export function finalizarLote(resultados, cancelado = false) {
 function participantesDoLote(desduplicar) {
   const vistos = new Set();
   const linhas = [];
-  for (const g of resultadosLote) {
+  for (const g of resultadosLote()) {
     for (const p of (g.participants || [])) {
       const telefone = apenasDigitos(p.phone);
       if (desduplicar && telefone && !p.hidden) {
@@ -68,7 +69,7 @@ function participantesDoLote(desduplicar) {
 
 function copiarTelefonesLote() {
   const telefones = [];
-  resultadosLote.forEach((g) => { (g.participants || []).forEach((p) => { if (p.phone && !p.hidden) telefones.push(apenasDigitos(p.phone)); }); });
+  resultadosLote().forEach((g) => { (g.participants || []).forEach((p) => { if (p.phone && !p.hidden) telefones.push(apenasDigitos(p.phone)); }); });
   copiarTexto([...new Set(telefones)].join('\r\n'), `${new Set(telefones).size} telefones únicos copiados!`);
 }
 

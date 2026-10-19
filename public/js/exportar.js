@@ -1,8 +1,9 @@
 // Exportação do grupo inteiro (CSV, Excel com fotos, JSON) e cópia de telefones.
-import { $, baixarArquivo, copiarTexto, mostrarAviso } from './ui.js';
+import { baixarArquivo, copiarTexto, mostrarAviso } from './ui.js';
 import { estaSincronizando, BOTOES_EXPORTACAO } from './conexao.js';
 import { apenasDigitos } from './logica/texto.js';
 import { linhaExportacao } from './logica/filtros.js';
+import { obterEstado } from './estado.js';
 
 const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const PX_PARA_PONTOS = 0.75;
@@ -44,10 +45,7 @@ export function exportarExcel(grupo, botao) {
 }
 
 /* ========== EXCEL (.xlsx com fotos embutidas) ========== */
-function tamanhoFotoExcel() {
-  const tamanho = parseInt($('imageSizeInput').value, 10);
-  return Number.isFinite(tamanho) ? Math.min(500, Math.max(20, tamanho)) : 100;
-}
+const tamanhoFotoExcel = () => obterEstado().tamanhoFotoExcel;
 
 async function embutirFoto(planilha, aba, linha, urlFoto, tamanho) {
   if (!urlFoto) return;
