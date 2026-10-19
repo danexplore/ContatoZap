@@ -10,6 +10,7 @@ import { textoMembros, tempoRelativo } from './logica/texto.js';
 import { criarAvatar } from './componentes/avatar.js';
 import { criarMenu } from './componentes/menu.js';
 import { criarListaParticipantes } from './componentes/lista-participantes.js';
+import { renderizarGrade, renderizarEsqueleto } from './grade.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
 import { debounce } from './logica/debounce.js';
 import { filtrarParticipantes, ordenarParticipantes } from './logica/filtros.js';
@@ -88,10 +89,12 @@ function mostrarSomente(area) {
 
 function mostrarCarregando(id) {
   mostrarSomente('loadingDetail');
-  const nome = nomeDoGrupo(id);
-  $('loadingDetailMsg').textContent = obterEstado().buscarFotos
-    ? `Carregando membros e fotos de "${nome}"...`
-    : `Carregando membros de "${nome}"...`;
+  const conteiner = $('loadingDetail');
+  if (!conteiner) return;
+  const { modo } = obterEstado();
+  // Limpa conteúdo anterior (mensagem de texto) e renderiza o esqueleto
+  const total = grupoDoServidor(id)?.size || 0;
+  renderizarEsqueleto(conteiner, modo, { total });
 }
 
 function mostrarAvisoDoGrupo({ titulo, detalhe, botao, acao }) {
@@ -144,7 +147,7 @@ function renderizarChipsDeFiltro(lista) {
 function renderizarListaDeParticipantes(grupo) {
   const conteiner = $('areaParticipantes');
   if (!conteiner) return;
-  const { abaAtiva } = obterEstado();
+  const { abaAtiva, modo, tamanhoGrade } = obterEstado();
   const visao = abaAtiva ? obterEstado().visoes.get(abaAtiva) : null;
   const filtro = visao?.filtro || 'todos';
   const busca = visao?.busca || '';
@@ -154,28 +157,34 @@ function renderizarListaDeParticipantes(grupo) {
   const filtrados = filtrarParticipantes(grupo.participants || [], { filtro, busca });
   const ordenados = ordenarParticipantes(filtrados, ordenacao.coluna, ordenacao.asc);
 
-  const lista = criarListaParticipantes({
-    participantes: ordenados,
-    ordenacao,
-    aoOrdenar: (coluna) => {
-      if (!abaAtiva) return;
-      const atual = obterEstado().visoes.get(abaAtiva)?.ordenacao || { coluna: null, asc: true };
-      let nova;
-      if (atual.coluna !== coluna) {
-        nova = { coluna, asc: true };
-      } else if (atual.asc) {
-        nova = { coluna, asc: false };
-      } else {
-        nova = { coluna: null, asc: true };
-      }
-      atualizarVisao(abaAtiva, { ordenacao: nova });
-    },
-    aoAbrir: (id) => {
-      atualizarEstado({ fichaAberta: id === obterEstado().fichaAberta ? null : id });
-    },
-    fichaAberta,
-  });
-  conteiner.replaceChildren(lista);
+  const aoAbrir = (id) => {
+    atualizarEstado({ fichaAberta: id === obterEstado().fichaAberta ? null : id });
+  };
+
+  if (modo === 'grade') {
+    renderizarGrade(conteiner, ordenados, { tamanho: tamanhoGrade, aoAbrir, fichaAberta });
+  } else {
+    const lista = criarListaParticipantes({
+      participantes: ordenados,
+      ordenacao,
+      aoOrdenar: (coluna) => {
+        if (!abaAtiva) return;
+        const atual = obterEstado().visoes.get(abaAtiva)?.ordenacao || { coluna: null, asc: true };
+        let nova;
+        if (atual.coluna !== coluna) {
+          nova = { coluna, asc: true };
+        } else if (atual.asc) {
+          nova = { coluna, asc: false };
+        } else {
+          nova = { coluna: null, asc: true };
+        }
+        atualizarVisao(abaAtiva, { ordenacao: nova });
+      },
+      aoAbrir,
+      fichaAberta,
+    });
+    conteiner.replaceChildren(lista);
+  }
 }
 
 function mostrarGrupo(grupo) {
