@@ -63,3 +63,11 @@ test('foto por cima das iniciais; se falhar, some sem aviso', () => {
   assert.equal(a.children[0].textContent, 'A');
   assert.ok(!a.classList.contains('avatar--com-foto'));
 });
+
+test('URL que já falhou não é usada de novo: fica só com as iniciais', () => {
+  const url = 'https://exemplo/quebrada.jpg';
+  criarAvatar({ id: 'y', nome: 'Bia', foto: url }).children[1].disparar('error');
+  const outro = criarAvatar({ id: 'y', nome: 'Bia', foto: url });
+  assert.equal(outro.children.length, 1);
+  assert.ok(!outro.classList.contains('avatar--com-foto'));
+});

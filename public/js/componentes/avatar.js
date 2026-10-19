@@ -3,6 +3,8 @@ import { iniciais } from '../logica/texto.js';
 import { corDoId } from '../logica/cor.js';
 
 const PROPORCAO_FONTE = 0.4;
+// URLs que já falharam ao carregar (ex.: expiradas): não são pedidas de novo a cada redesenho.
+const urlsQuebradas = new Set();
 
 export function criarAvatar({ id, nome, foto = null, tamanho = 32, forma = 'circulo' }) {
   const avatar = document.createElement('span');
@@ -22,13 +24,14 @@ export function criarAvatar({ id, nome, foto = null, tamanho = 32, forma = 'circ
   letras.textContent = iniciais(nome);
   avatar.appendChild(letras);
 
-  if (foto) {
+  if (foto && !urlsQuebradas.has(foto)) {
     const img = document.createElement('img');
     img.className = 'avatar-foto';
     img.alt = '';
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
     img.addEventListener('error', () => {
+      urlsQuebradas.add(foto);
       img.remove();
       avatar.classList.remove('avatar--com-foto');
     });
