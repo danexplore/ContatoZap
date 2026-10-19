@@ -14,7 +14,10 @@ const CHAVES_LISTA = ['abaAtiva', 'grupos', 'visoes'];
 // Paginação é só desta tabela; filtro, busca e ordenação ficam na visão do grupo (estado.js).
 let paginaAtual = 1;
 let tamanhoPagina = 50;
-// Grupo + filtro + busca da última renderização: se mudar, volta à primeira página
+// Página de cada aba, para voltar a ela ao trocar de aba
+const paginaPorAba = new Map();
+let ultimaAba = null;
+// Filtro + busca da última renderização: se mudar na mesma aba, volta à primeira página
 let ultimaConsulta = '';
 
 function criarCelulaTexto(texto) {
@@ -95,8 +98,12 @@ function sincronizarControles(visao) {
 function renderizarLista({ primeiraPagina = false } = {}) {
   const { abaAtiva } = obterEstado();
   const visao = visaoDoGrupo(abaAtiva);
-  const consulta = JSON.stringify([abaAtiva, visao.filtro, visao.busca]);
-  if (primeiraPagina || consulta !== ultimaConsulta) paginaAtual = 1;
+  const consulta = JSON.stringify([visao.filtro, visao.busca]);
+  // Enquanto o grupo carrega não há páginas: a da aba só é lida e gravada com ele pronto
+  const pronto = Boolean(obterGrupoAtivo());
+  if (pronto && abaAtiva !== ultimaAba) paginaAtual = paginaPorAba.get(abaAtiva) || 1;
+  else if (primeiraPagina || consulta !== ultimaConsulta) paginaAtual = 1;
+  if (pronto) ultimaAba = abaAtiva;
   ultimaConsulta = consulta;
   sincronizarControles(visao);
   const lista = membrosFiltradosEOrdenados(visao);
@@ -106,7 +113,12 @@ function renderizarLista({ primeiraPagina = false } = {}) {
   $('pageTotalText').textContent = total;
   const limite = tamanhoPagina === 'all' ? total : parseInt(tamanhoPagina, 10);
   const totalPaginas = Math.max(1, Math.ceil(total / (limite || 1)));
-  if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+  if (pronto) {
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    paginaPorAba.set(abaAtiva, paginaAtual);
+    // Abas fechadas não guardam página
+    for (const id of paginaPorAba.keys()) if (!obterEstado().recentes.some((r) => r.id === id)) paginaPorAba.delete(id);
+  }
   const inicio = (paginaAtual - 1) * limite;
   const fim = Math.min(inicio + limite, total);
   $('pageShowingText').textContent = total === 0 ? '0-0' : `${inicio + 1}-${fim}`;

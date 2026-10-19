@@ -3,7 +3,7 @@
 import { $, mostrarAviso } from './ui.js';
 import { iniciarLote, recarregarGrupos } from './api.js';
 import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
-import { abrirGrupo } from './grupo.js';
+import { abrirGrupo } from './abas.js';
 import { filtrarGrupos, separarSecoes } from './logica/filtros.js';
 import { normalizar } from './logica/texto.js';
 import { criarAvatar } from './componentes/avatar.js';

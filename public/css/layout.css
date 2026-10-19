@@ -76,6 +76,79 @@
   .grid-layout.layout--trilho { grid-template-columns: var(--trilho-largura) minmax(0, 1fr); }
 }
 
+/* ========== ABAS DE RECENTES ========== */
+/* Faixa no topo do card do grupo; encosta nas bordas do card (anula o padding dele) e rola na horizontal */
+.abas-faixa {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) 0;
+  padding: var(--space-2) var(--space-3) 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  background: hsl(var(--color-bg-secondary));
+  border-bottom: 1px solid hsl(var(--color-border-default));
+}
+.aba {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 220px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  color: hsl(var(--color-text-secondary));
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.aba:hover { background: hsl(var(--color-bg-tertiary)); color: hsl(var(--color-text-primary)); }
+.aba--ativa,
+.aba--ativa:hover {
+  background: hsl(var(--color-bg-primary));
+  color: hsl(var(--color-text-primary));
+  box-shadow: inset 0 -2px 0 hsl(var(--color-primary));
+}
+.aba-botao {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 36px;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: var(--text-body-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.aba-botao .avatar { flex-shrink: 0; }
+.aba-botao:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.aba-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aba-fechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-right: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  opacity: 0.65;
+  cursor: pointer;
+}
+.aba-fechar:hover { opacity: 1; background: hsl(var(--color-bg-tertiary)); }
+@media (pointer: coarse) {
+  .aba-botao { height: var(--alvo-toque); }
+  .aba-fechar { width: var(--alvo-toque); height: var(--alvo-toque); margin-right: 0; opacity: 0.8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aba { transition: none; }
+}
+
 /* ========== CARD ========== */
 .card {
   background: hsl(var(--color-bg-primary));

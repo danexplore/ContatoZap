@@ -19,6 +19,7 @@
 }
 .detail-empty svg { width: 48px; height: 48px; color: hsl(var(--color-border-strong)); }
 .detail-empty p { font: var(--text-body); max-width: 360px; }
+.detail-empty .detail-aviso-titulo { font: var(--text-h3); color: hsl(var(--color-text-primary)); }
 
 .detail-header {
   display: flex;

@@ -6,6 +6,7 @@ import { iniciarConexao } from './conexao.js';
 import { atualizarTamanhoGrupo, iniciarSidebar } from './sidebar.js';
 import { iniciarGrupo } from './grupo.js';
 import { ativarRedimensionamentoFoto, iniciarLista } from './lista.js';
+import { iniciarAbas } from './abas.js';
 import { abrirLote, atualizarLote, finalizarLote, iniciarDrawerLote } from './lote.js';
 
 function aplicarTema(tema) {
@@ -29,6 +30,7 @@ iniciarConexao();
 iniciarSidebar();
 iniciarGrupo();
 iniciarLista();
+iniciarAbas();
 ativarRedimensionamentoFoto();
 iniciarDrawerLote();
 

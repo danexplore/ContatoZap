@@ -148,116 +148,126 @@
 
     <!-- Right Column: Detail View -->
     <main class="card detail-card" id="main-content" aria-label="Detalhes do grupo" tabindex="-1">
+      <div class="abas-faixa" id="abasFaixa" role="tablist" aria-label="Grupos abertos" hidden></div>
+
       <div id="emptyDetail" class="detail-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <p>Selecione um grupo ao lado para inspecionar e extrair os membros.</p>
         <p style="font: var(--text-caption);">Ou selecione múltiplos grupos usando os checkboxes para extração consolidada.</p>
       </div>
 
-      <div id="loadingDetail" class="detail-empty" hidden>
-        <div class="spinner" role="progressbar" aria-label="Carregando participantes"></div>
-        <p id="loadingDetailMsg">Extraindo participantes do WhatsApp...</p>
-        <p style="font: var(--text-caption); color: hsl(var(--color-text-tertiary));">Grupos com mais de 500 membros podem levar alguns segundos.</p>
-      </div>
+      <div id="painelGrupo" class="painel-grupo" role="tabpanel" hidden>
+        <div id="loadingDetail" class="detail-empty" hidden>
+          <div class="spinner" role="progressbar" aria-label="Carregando participantes"></div>
+          <p id="loadingDetailMsg">Extraindo participantes do WhatsApp...</p>
+          <p style="font: var(--text-caption); color: hsl(var(--color-text-tertiary));">Grupos com mais de 500 membros podem levar alguns segundos.</p>
+        </div>
 
-      <div id="activeGroupView" hidden>
-        <!-- Group Header -->
-        <div class="detail-header">
-          <div class="detail-title-group">
-            <h2 id="activeGroupName">Nome do Grupo</h2>
-            <div class="detail-meta">
-              <span id="activeGroupCount">0 participantes</span>
-              <span aria-hidden="true">·</span>
-              <span id="activeGroupDuration" class="badge neutral">0.0s</span>
+        <div id="avisoGrupo" class="detail-empty" hidden>
+          <p id="avisoGrupoTitulo" class="detail-aviso-titulo"></p>
+          <p id="avisoGrupoDetalhe"></p>
+          <button type="button" class="btn" id="avisoGrupoBtn"></button>
+        </div>
+
+        <div id="activeGroupView" hidden>
+          <!-- Group Header -->
+          <div class="detail-header">
+            <div class="detail-title-group">
+              <h2 id="activeGroupName">Nome do Grupo</h2>
+              <div class="detail-meta">
+                <span id="activeGroupCount">0 participantes</span>
+                <span aria-hidden="true">·</span>
+                <span id="activeGroupDuration" class="badge neutral">0.0s</span>
+              </div>
+            </div>
+            <div class="detail-actions">
+              <label class="photo-checkbox-label" title="Consultar fotos de perfil nos servidores do WhatsApp (se acessíveis)">
+                <input type="checkbox" id="fetchPhotosCheckbox">
+                <span>Fotos</span>
+              </label>
+              <button class="btn sm" id="refreshActiveGroupBtn" aria-label="Buscar participantes mais recentes">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Atualizar
+              </button>
+              <button class="btn sm" id="copyPhonesBtn">Copiar Telefones</button>
+              <button class="btn sm" id="exportCsvBtn">CSV</button>
+              <label class="image-size-field" title="Tamanho das fotos embutidas no Excel">
+                <span>Foto no Excel</span>
+                <input type="number" id="imageSizeInput" value="100" min="20" max="500" step="10" aria-label="Tamanho da foto no Excel, em pixels">
+                <span>px</span>
+              </label>
+              <button class="btn sm primary" id="exportExcelBtn">Excel</button>
+              <button class="btn sm ghost" id="exportJsonBtn">JSON</button>
             </div>
           </div>
-          <div class="detail-actions">
-            <label class="photo-checkbox-label" title="Consultar fotos de perfil nos servidores do WhatsApp (se acessíveis)">
-              <input type="checkbox" id="fetchPhotosCheckbox">
-              <span>Fotos</span>
-            </label>
-            <button class="btn sm" id="refreshActiveGroupBtn" aria-label="Buscar participantes mais recentes">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              Atualizar
-            </button>
-            <button class="btn sm" id="copyPhonesBtn">Copiar Telefones</button>
-            <button class="btn sm" id="exportCsvBtn">CSV</button>
-            <label class="image-size-field" title="Tamanho das fotos embutidas no Excel">
-              <span>Foto no Excel</span>
-              <input type="number" id="imageSizeInput" value="100" min="20" max="500" step="10" aria-label="Tamanho da foto no Excel, em pixels">
-              <span>px</span>
-            </label>
-            <button class="btn sm primary" id="exportExcelBtn">Excel</button>
-            <button class="btn sm ghost" id="exportJsonBtn">JSON</button>
-          </div>
-        </div>
 
-        <!-- Metrics Cards -->
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <span class="metric-label">Total Membros</span>
-            <span class="metric-value" id="metricTotal">0</span>
+          <!-- Metrics Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Total Membros</span>
+              <span class="metric-value" id="metricTotal">0</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Com Telefone</span>
+              <span class="metric-value accent" id="metricPhones">0</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Administradores</span>
+              <span class="metric-value info" id="metricAdmins">0</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Privacidade (LID)</span>
+              <span class="metric-value warning" id="metricHidden">0</span>
+            </div>
           </div>
-          <div class="metric-card">
-            <span class="metric-label">Com Telefone</span>
-            <span class="metric-value accent" id="metricPhones">0</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Administradores</span>
-            <span class="metric-value info" id="metricAdmins">0</span>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Privacidade (LID)</span>
-            <span class="metric-value warning" id="metricHidden">0</span>
-          </div>
-        </div>
 
-        <!-- Table Toolbar -->
-        <div class="table-toolbar" style="margin-top: var(--space-4);">
-          <div class="filter-tabs" role="tablist" aria-label="Filtros de contatos">
-            <button class="filter-tab active" data-filter="todos" role="tab" aria-selected="true">Todos (<span id="tabCountAll">0</span>)</button>
-            <button class="filter-tab" data-filter="telefone" role="tab" aria-selected="false">Telefone (<span id="tabCountPhones">0</span>)</button>
-            <button class="filter-tab" data-filter="admins" role="tab" aria-selected="false">Admins (<span id="tabCountAdmins">0</span>)</button>
-            <button class="filter-tab" data-filter="privados" role="tab" aria-selected="false">Privacidade (<span id="tabCountHidden">0</span>)</button>
+          <!-- Table Toolbar -->
+          <div class="table-toolbar" style="margin-top: var(--space-4);">
+            <div class="filter-tabs" role="tablist" aria-label="Filtros de contatos">
+              <button class="filter-tab active" data-filter="todos" role="tab" aria-selected="true">Todos (<span id="tabCountAll">0</span>)</button>
+              <button class="filter-tab" data-filter="telefone" role="tab" aria-selected="false">Telefone (<span id="tabCountPhones">0</span>)</button>
+              <button class="filter-tab" data-filter="admins" role="tab" aria-selected="false">Admins (<span id="tabCountAdmins">0</span>)</button>
+              <button class="filter-tab" data-filter="privados" role="tab" aria-selected="false">Privacidade (<span id="tabCountHidden">0</span>)</button>
+            </div>
+            <div class="table-search-wrap input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="search" id="memberSearch" placeholder="Buscar nome ou número..." aria-label="Buscar contatos por nome ou número">
+            </div>
           </div>
-          <div class="table-search-wrap input-wrap">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="search" id="memberSearch" placeholder="Buscar nome ou número..." aria-label="Buscar contatos por nome ou número">
+
+          <!-- Data Table -->
+          <div class="table-wrapper" id="areaParticipantes" style="margin-top: var(--space-3);">
+            <table role="grid" aria-label="Participantes do grupo">
+              <thead>
+                <tr>
+                  <th style="width:44px;" scope="col">#</th>
+                  <th id="thPhoto" class="photo-col" scope="col">Foto<span class="col-resize-handle" id="photoResizeHandle" aria-hidden="true"></span></th>
+                  <th class="sortable" data-sort="nome_whatsapp" scope="col">Nome WhatsApp <span class="sort-icon" aria-hidden="true"></span></th>
+                  <th class="sortable" data-sort="nome_agenda" scope="col">Nome Agenda <span class="sort-icon" aria-hidden="true"></span></th>
+                  <th class="sortable" data-sort="telefone" scope="col">Telefone <span class="sort-icon" aria-hidden="true"></span></th>
+                  <th class="sortable" data-sort="admin" style="width:90px;" scope="col">Admin <span class="sort-icon" aria-hidden="true"></span></th>
+                  <th class="sortable" data-sort="status" style="width:190px;" scope="col">Status <span class="sort-icon" aria-hidden="true"></span></th>
+                </tr>
+              </thead>
+              <tbody id="membersTbody"></tbody>
+            </table>
           </div>
-        </div>
 
-        <!-- Data Table -->
-        <div class="table-wrapper" style="margin-top: var(--space-3);">
-          <table role="grid" aria-label="Participantes do grupo">
-            <thead>
-              <tr>
-                <th style="width:44px;" scope="col">#</th>
-                <th id="thPhoto" class="photo-col" scope="col">Foto<span class="col-resize-handle" id="photoResizeHandle" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="nome_whatsapp" scope="col">Nome WhatsApp <span class="sort-icon" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="nome_agenda" scope="col">Nome Agenda <span class="sort-icon" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="telefone" scope="col">Telefone <span class="sort-icon" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="admin" style="width:90px;" scope="col">Admin <span class="sort-icon" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="status" style="width:190px;" scope="col">Status <span class="sort-icon" aria-hidden="true"></span></th>
-              </tr>
-            </thead>
-            <tbody id="membersTbody"></tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="table-footer">
-          <div>Exibindo <span id="pageShowingText">0-0</span> de <span id="pageTotalText">0</span> contatos</div>
-          <div class="pagination-controls">
-            <label for="pageSizeSelect" class="sr-only">Linhas por página</label>
-            <select id="pageSizeSelect" class="styled-select">
-              <option value="25">25</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-              <option value="all">Todas</option>
-            </select>
-            <button class="btn sm" id="prevPageBtn" aria-label="Página anterior">Anterior</button>
-            <span id="pageCurrentLabel" style="font-weight:600; font: var(--text-body-sm);">1 / 1</span>
-            <button class="btn sm" id="nextPageBtn" aria-label="Próxima página">Próxima</button>
+          <!-- Pagination -->
+          <div class="table-footer">
+            <div>Exibindo <span id="pageShowingText">0-0</span> de <span id="pageTotalText">0</span> contatos</div>
+            <div class="pagination-controls">
+              <label for="pageSizeSelect" class="sr-only">Linhas por página</label>
+              <select id="pageSizeSelect" class="styled-select">
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="all">Todas</option>
+              </select>
+              <button class="btn sm" id="prevPageBtn" aria-label="Página anterior">Anterior</button>
+              <span id="pageCurrentLabel" style="font-weight:600; font: var(--text-body-sm);">1 / 1</span>
+              <button class="btn sm" id="nextPageBtn" aria-label="Próxima página">Próxima</button>
+            </div>
           </div>
         </div>
       </div>
