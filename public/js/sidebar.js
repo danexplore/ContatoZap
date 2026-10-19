@@ -14,6 +14,7 @@ import { observarFotoGrupo } from './fotos-grupos.js';
 const CHAVES_REDESENHO = ['conexao', 'abaAtiva', 'fixados', 'secoes', 'sidebarRecolhida'];
 const TAMANHO_AVATAR = 32;
 const CONSULTA_GAVETA = '(max-width: 1023px)';
+const ESPERA_FILTRO_MS = 100;
 
 let gavetaAberta = false;
 
@@ -189,8 +190,11 @@ function renderizarSidebar() {
 
   $('totalGroupsCount').textContent = todos.length;
   const semFixados = separarSecoes(todos, obterEstado().fixados).fixados.length === 0;
-  renderizarSecao('fixados', secoes.fixados, semFixados ? 'Clique na ☆ para fixar um grupo.' : 'Nenhum fixado com este filtro.');
-  renderizarSecao('todos', secoes.todos, comFiltro ? 'Nenhum grupo com este filtro.' : 'Nenhum grupo encontrado.');
+  // No trilho as seções ficam escondidas (e são redesenhadas ao expandir): não vale montá-las
+  if (!obterEstado().sidebarRecolhida) {
+    renderizarSecao('fixados', secoes.fixados, semFixados ? 'Clique na ☆ para fixar um grupo.' : 'Nenhum fixado com este filtro.');
+    renderizarSecao('todos', secoes.todos, comFiltro ? 'Nenhum grupo com este filtro.' : 'Nenhum grupo encontrado.');
+  }
   lista.scrollTop = rolagem;
   aplicarRecolhida();
   renderizarTrilho();
@@ -229,6 +233,10 @@ function atualizarContadorSelecionados() {
   $('selectedCount').textContent = total;
   $('batchSidebarBar').hidden = total === 0;
   $('batchSidebarText').textContent = `${total} grupo(s)`;
+  const selo = $('trilhoSelecionados');
+  selo.hidden = total === 0;
+  selo.textContent = total;
+  selo.setAttribute('aria-label', `${total} ${total === 1 ? 'grupo selecionado' : 'grupos selecionados'}. Expandir a lista de grupos`);
 }
 
 function alternarSecao(chave) {
@@ -250,6 +258,7 @@ function mostrarGaveta(aberta) {
   $('sidebarFundo').hidden = !aberta;
   $('abrirSidebarBtn').setAttribute('aria-expanded', aberta ? 'true' : 'false');
   $('main-content').inert = aberta;
+  document.querySelector('.app-header').inert = aberta;
 }
 
 export function abrirGavetaSidebar() {
@@ -305,12 +314,17 @@ export function iniciarSidebar() {
     atualizarEstado({ selecionados });
   });
   $('clearSelectionBtn').addEventListener('click', () => atualizarEstado({ selecionados: new Set() }));
-  $('groupSearch').addEventListener('input', renderizarSidebar);
+  let temporizadorFiltro = null;
+  $('groupSearch').addEventListener('input', () => {
+    clearTimeout(temporizadorFiltro);
+    temporizadorFiltro = setTimeout(renderizarSidebar, ESPERA_FILTRO_MS);
+  });
   $('refreshGroupsBtn').addEventListener('click', () => recarregarGrupos());
   $('startBatchBtn').addEventListener('click', extrairSelecionados);
 
   $('recolherSidebarBtn').addEventListener('click', alternarRecolhida);
   $('expandirSidebarBtn').addEventListener('click', alternarRecolhida);
+  $('trilhoSelecionados').addEventListener('click', alternarRecolhida);
   $('abrirSidebarBtn').addEventListener('click', abrirGavetaSidebar);
   $('fecharSidebarBtn').addEventListener('click', fecharGavetaSidebar);
   $('sidebarFundo').addEventListener('click', fecharGavetaSidebar);
