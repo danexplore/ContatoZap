@@ -1,6 +1,6 @@
 // Aba de grupo recente: avatar + nome (o botão com role="tab") e o × ao lado.
 // O × fica fora do botão da aba (controle dentro de controle não é acessível); pelo teclado, Delete fecha.
-import { ICONES } from '../ui.js';
+import { criarIcone } from '../ui.js';
 import { criarAvatar } from './avatar.js';
 
 const TAMANHO_AVATAR = 20;
@@ -37,7 +37,7 @@ export function criarAba({ id, nome, foto = null, ativa = false, aoAtivar, aoFec
   fechar.tabIndex = -1;
   fechar.setAttribute('aria-label', `Fechar ${nome}`);
   fechar.title = `Fechar ${nome}`;
-  fechar.innerHTML = ICONES.x;
+  fechar.append(criarIcone('x'));
   fechar.addEventListener('click', (e) => {
     e.stopPropagation();
     aoFechar();
