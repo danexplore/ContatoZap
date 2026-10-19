@@ -20,6 +20,8 @@
 
 Todos os valores estão em HSL (sem parênteses). Use `hsl(var(--token))` no consumo.
 
+> Primária = teal da marca (`#0D9488`, `docs/brand.md` §4). Botões primários com texto branco usam `--color-primary-solid` (`#0F766E`), que passa no WCAG AA; o `#0D9488` fica para links, seleção, abas ativas, foco e logo. Os tokens ficam em `public/css/tokens.css`.
+
 ### 2.1 Light Mode
 
 | Token | Valor | Uso |
@@ -34,11 +36,14 @@ Todos os valores estão em HSL (sem parênteses). Use `hsl(var(--token))` no con
 | `--color-text-inverse` | `0 0% 100%` | Texto sobre fundos escuros |
 | `--color-border-default` | `210 15% 88%` | Bordas sutis, divisores |
 | `--color-border-strong` | `210 15% 78%` | Bordas de inputs, separadores fortes |
-| `--color-border-focus` | `215 60% 55%` | Ring de foco acessível |
-| `--color-primary` | `215 25% 40%` | Botões primários, links, ações principais |
-| `--color-primary-hover` | `215 28% 34%` | Hover de primary |
-| `--color-primary-active` | `215 30% 28%` | Active/pressed de primary |
-| `--color-primary-subtle` | `215 40% 95%` | Backgrounds de destaque suave |
+| `--color-border-focus` | `175 84% 32%` | Ring de foco acessível (teal `#0D9488`) |
+| `--color-primary` | `175 84% 32%` | Teal da marca (`#0D9488`): links, seleção, abas ativas, foco, logo |
+| `--color-primary-hover` | `175 84% 27%` | Hover de primary |
+| `--color-primary-active` | `175 85% 22%` | Active/pressed de primary |
+| `--color-primary-subtle` | `170 60% 94%` | Backgrounds de destaque suave |
+| `--color-primary-solid` | `175 77% 26%` | Fundo de botão primário (`#0F766E`, contraste 5,5:1 com branco — AA) |
+| `--color-primary-solid-hover` | `175 80% 21%` | Hover/active de botão primário |
+| `--color-on-primary-solid` | `0 0% 100%` | Texto sobre botão primário |
 | `--color-success` | `152 55% 38%` | Confirmação, status positivo |
 | `--color-success-subtle` | `152 45% 94%` | Fundo de toast/badge success |
 | `--color-warning` | `38 90% 48%` | Atenção, dados incompletos |
@@ -62,11 +67,14 @@ Todos os valores estão em HSL (sem parênteses). Use `hsl(var(--token))` no con
 | `--color-text-inverse` | `215 25% 12%` | Texto sobre fundos claros |
 | `--color-border-default` | `215 15% 22%` | Bordas sutis |
 | `--color-border-strong` | `215 15% 32%` | Bordas de inputs |
-| `--color-border-focus` | `215 55% 60%` | Ring de foco |
-| `--color-primary` | `215 45% 60%` | Ações principais |
-| `--color-primary-hover` | `215 48% 68%` | Hover de primary |
-| `--color-primary-active` | `215 50% 74%` | Active/pressed de primary |
-| `--color-primary-subtle` | `215 30% 18%` | Destaque suave |
+| `--color-border-focus` | `172 66% 50%` | Ring de foco (teal clareado para fundo escuro) |
+| `--color-primary` | `172 66% 50%` | Teal da marca clareado: links, seleção, abas ativas, foco |
+| `--color-primary-hover` | `172 66% 58%` | Hover de primary |
+| `--color-primary-active` | `172 70% 65%` | Active/pressed de primary |
+| `--color-primary-subtle` | `175 50% 14%` | Destaque suave |
+| `--color-primary-solid` | `175 77% 26%` | Fundo de botão primário (igual ao claro, `#0F766E`) |
+| `--color-primary-solid-hover` | `175 80% 21%` | Hover/active de botão primário |
+| `--color-on-primary-solid` | `0 0% 100%` | Texto sobre botão primário |
 | `--color-success` | `152 50% 50%` | Sucesso |
 | `--color-success-subtle` | `152 35% 16%` | Fundo success |
 | `--color-warning` | `38 85% 58%` | Atenção |
@@ -220,7 +228,7 @@ Dark mode: substituir `8%` por `40%` na opacidade das sombras.
 
 | Variante | Default | Hover | Active | Focus | Disabled |
 |----------|---------|-------|--------|-------|----------|
-| Primary | bg `--color-primary`, text `--color-text-inverse` | bg `--color-primary-hover` | bg `--color-primary-active` | ring `--shadow-focus` | opacity 0.4, cursor not-allowed |
+| Primary | bg `--color-primary-solid`, text `--color-on-primary-solid` | bg `--color-primary-solid-hover` | bg `--color-primary-solid-hover` | ring `--shadow-focus` | opacity 0.4, cursor not-allowed |
 | Secondary | border `--color-border-strong`, text `--color-text-primary`, bg transparent | bg `--color-bg-tertiary` | bg `--color-bg-secondary` | ring `--shadow-focus` | opacity 0.4 |
 | Ghost | text `--color-text-secondary`, bg transparent | bg `--color-bg-tertiary`, text `--color-text-primary` | bg `--color-bg-secondary` | ring `--shadow-focus` | opacity 0.4 |
 | Destructive | bg `--color-error`, text `--color-text-inverse` | bg mais escuro 8% | bg mais escuro 14% | ring `--shadow-focus` com cor error | opacity 0.4 |
@@ -712,7 +720,7 @@ Dark mode: substituir `8%` por `40%` na opacidade das sombras.
 
 ### 8.2 Focus Visible
 
-- Todo elemento interativo tem ring de foco visível: `--shadow-focus`.
+- Todo elemento interativo tem ring de foco visível: `--shadow-focus` (teal, a partir de `--color-border-focus`).
 - Nunca usar `outline: none` sem substituto.
 - Focus order segue ordem visual/DOM.
 - Skip link no topo da página: "Pular para o conteúdo principal".

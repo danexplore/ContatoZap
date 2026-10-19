@@ -22,11 +22,15 @@
   --color-text-inverse: 0 0% 100%;
   --color-border-default: 210 15% 88%;
   --color-border-strong: 210 15% 78%;
-  --color-border-focus: 215 60% 55%;
-  --color-primary: 215 25% 40%;
-  --color-primary-hover: 215 28% 34%;
-  --color-primary-active: 215 30% 28%;
-  --color-primary-subtle: 215 40% 95%;
+  --color-border-focus: 175 84% 32%;
+  --color-primary: 175 84% 32%;
+  --color-primary-hover: 175 84% 27%;
+  --color-primary-active: 175 85% 22%;
+  --color-primary-subtle: 170 60% 94%;
+  /* Fundo de botão primário com texto branco: #0F766E, contraste 5,5:1 (AA) */
+  --color-primary-solid: 175 77% 26%;
+  --color-primary-solid-hover: 175 80% 21%;
+  --color-on-primary-solid: 0 0% 100%;
   --color-success: 152 55% 38%;
   --color-success-subtle: 152 45% 94%;
   --color-warning: 38 90% 48%;
@@ -94,6 +98,14 @@
   --container-md: 768px;
   --container-lg: 1024px;
   --container-xl: 1280px;
+
+  /* Layout do redesign */
+  --sidebar-largura: 300px;
+  --trilho-largura: 56px;
+  --grade-p: 120px;
+  --grade-m: 160px;
+  --grade-g: 220px;
+  --alvo-toque: 44px;
 }
 
 [data-theme="dark"] {
@@ -107,11 +119,14 @@
   --color-text-inverse: 215 25% 12%;
   --color-border-default: 215 15% 22%;
   --color-border-strong: 215 15% 32%;
-  --color-border-focus: 215 55% 60%;
-  --color-primary: 215 45% 60%;
-  --color-primary-hover: 215 48% 68%;
-  --color-primary-active: 215 50% 74%;
-  --color-primary-subtle: 215 30% 18%;
+  --color-border-focus: 172 66% 50%;
+  --color-primary: 172 66% 50%;
+  --color-primary-hover: 172 66% 58%;
+  --color-primary-active: 172 70% 65%;
+  --color-primary-subtle: 175 50% 14%;
+  --color-primary-solid: 175 77% 26%;
+  --color-primary-solid-hover: 175 80% 21%;
+  --color-on-primary-solid: 0 0% 100%;
   --color-success: 152 50% 50%;
   --color-success-subtle: 152 35% 16%;
   --color-warning: 38 85% 58%;
@@ -193,13 +208,13 @@ body {
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn.primary {
-  background: hsl(var(--color-primary));
-  border-color: hsl(var(--color-primary));
-  color: hsl(var(--color-text-inverse));
+  background: hsl(var(--color-primary-solid));
+  border-color: hsl(var(--color-primary-solid));
+  color: hsl(var(--color-on-primary-solid));
   font-weight: 600;
 }
-.btn.primary:hover:not(:disabled) { background: hsl(var(--color-primary-hover)); border-color: hsl(var(--color-primary-hover)); }
-.btn.primary:active:not(:disabled) { background: hsl(var(--color-primary-active)); }
+.btn.primary:hover:not(:disabled) { background: hsl(var(--color-primary-solid-hover)); border-color: hsl(var(--color-primary-solid-hover)); }
+.btn.primary:active:not(:disabled) { background: hsl(var(--color-primary-solid-hover)); }
 
 .btn.ghost {
   border-color: transparent;
