@@ -56,7 +56,7 @@ export function criarMenu({ rotulo, principal = false, itens }) {
       btn.type = 'button';
       btn.setAttribute('role', 'menuitem');
       btn.textContent = item.rotulo;
-      btn.addEventListener('click', () => { fechar(); item.aoEscolher(); });
+      btn.addEventListener('click', () => { fechar(); botao.focus(); item.aoEscolher(); });
       li.appendChild(btn);
     }
     lista.appendChild(li);
@@ -64,6 +64,7 @@ export function criarMenu({ rotulo, principal = false, itens }) {
 
   // Navegação por teclado dentro da lista
   lista.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' && e.key !== 'Escape') return;
     const focados = itensClicaveis();
     const idx = focados.indexOf(document.activeElement);
     if (e.key === 'ArrowDown') {
@@ -76,6 +77,7 @@ export function criarMenu({ rotulo, principal = false, itens }) {
       focados[anterior]?.focus();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       fechar();
       botao.focus();
     }
@@ -93,10 +95,13 @@ export function criarMenu({ rotulo, principal = false, itens }) {
 
   // Clique fora fecha
   wrapper.addEventListener('focusout', (e) => {
-    // Se o foco saiu do wrapper inteiro, fecha
-    requestAnimationFrame(() => {
+    if (e.relatedTarget) {
+      if (!wrapper.contains(e.relatedTarget)) fechar();
+      return;
+    }
+    setTimeout(() => {
       if (!wrapper.contains(document.activeElement)) fechar();
-    });
+    }, 0);
   });
 
   wrapper.append(botao, lista);

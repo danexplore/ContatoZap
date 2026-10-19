@@ -6,7 +6,7 @@ import { aoMudar, obterEstado } from './estado.js';
 export const estaSincronizando = () => Boolean(obterEstado().conexao.syncProgress);
 
 /* Exportar durante a sincronização gera arquivos incompletos */
-export const BOTOES_EXPORTACAO = ['exportCsvBtn', 'exportExcelBtn', 'exportJsonBtn', 'copyPhonesBtn', 'startBatchBtn'];
+export const BOTOES_EXPORTACAO = ['copyPhonesBtn', 'startBatchBtn'];
 
 function renderizarConexao(s) {
   const pronto = s.status === 'ready';
@@ -45,8 +45,8 @@ function renderizarSincronizacao(syncProgress) {
       : 60;
     $('syncProgressFill').style.width = `${pct}%`;
   }
-  for (const id of BOTOES_EXPORTACAO) {
-    const botao = $(id);
+  const botoes = [...BOTOES_EXPORTACAO.map($), ...document.querySelectorAll('#menuExportar button')];
+  for (const botao of botoes) {
     if (!botao) continue;
     botao.disabled = sincronizando;
     botao.title = sincronizando ? 'Aguarde a sincronização concluir para exportar dados completos' : '';

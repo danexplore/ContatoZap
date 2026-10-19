@@ -56,7 +56,7 @@ export function criarCardParticipante({ participante, selecionado, aoAbrir }) {
 
   card.addEventListener('click', () => aoAbrir(participante.id));
   card.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); aoAbrir(participante.id); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aoAbrir(participante.id); }
   });
 
   return card;

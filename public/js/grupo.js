@@ -1,4 +1,5 @@
 // Grupo da aba ativa: carregamento (com cache no navegador), cabeçalho, métricas, avisos e ações de exportação.
+import { abrirFicha, fecharFicha } from './ficha.js';
 import { $, mostrarAviso } from './ui.js';
 import { buscarGrupo } from './api.js';
 import { aoMudar, atualizarEstado, atualizarVisao, obterEstado, FOTO_EXCEL_MIN, FOTO_EXCEL_MAX } from './estado.js';
@@ -16,7 +17,7 @@ import { debounce } from './logica/debounce.js';
 import { filtrarParticipantes, ordenarParticipantes } from './logica/filtros.js';
 
 // conexao: a lista de grupos decide o "Grupo não encontrado"
-const CHAVES_GRUPO = ['abaAtiva', 'grupos', 'conexao'];
+const CHAVES_GRUPO = ['abaAtiva', 'grupos', 'conexao', 'visoes', 'modo', 'tamanhoGrade', 'fichaAberta'];
 const CHAVES_TELA_INICIAL = ['abaAtiva', 'conexao', 'fixados', 'fotosGrupos'];
 const TAMANHO_AVATAR_ATALHO = 40;
 
@@ -135,6 +136,7 @@ function renderizarChipsDeFiltro(lista) {
     { filtro: 'admins', rotulo: 'Admins' },
     { filtro: 'privados', rotulo: 'Privados' },
   ];
+  const filtroFocado = conteiner.contains(document.activeElement) ? document.activeElement.dataset.filtro : null;
   conteiner.replaceChildren(
     ...itens.map(({ filtro, rotulo }) =>
       criarChipFiltro(filtro, rotulo, contagem[filtro], filtroAtual === filtro, () => {
@@ -142,11 +144,13 @@ function renderizarChipsDeFiltro(lista) {
       })
     )
   );
+  if (filtroFocado) conteiner.querySelector(`[data-filtro="${filtroFocado}"]`)?.focus({ preventScroll: true });
 }
 
 function renderizarListaDeParticipantes(grupo) {
   const conteiner = $('areaParticipantes');
   if (!conteiner) return;
+  const idFocado = conteiner.contains(document.activeElement) ? document.activeElement.closest('[data-id]')?.dataset.id : null;
   const { abaAtiva, modo, tamanhoGrade } = obterEstado();
   const visao = abaAtiva ? obterEstado().visoes.get(abaAtiva) : null;
   const filtro = visao?.filtro || 'todos';
@@ -158,7 +162,8 @@ function renderizarListaDeParticipantes(grupo) {
   const ordenados = ordenarParticipantes(filtrados, ordenacao.coluna, ordenacao.asc);
 
   const aoAbrir = (id) => {
-    atualizarEstado({ fichaAberta: id === obterEstado().fichaAberta ? null : id });
+    if (id === obterEstado().fichaAberta) fecharFicha();
+    else abrirFicha(id, conteiner.querySelector(`[data-id="${CSS.escape(id)}"]`));
   };
 
   if (modo === 'grade') {
@@ -185,6 +190,24 @@ function renderizarListaDeParticipantes(grupo) {
     });
     conteiner.replaceChildren(lista);
   }
+  if (idFocado) conteiner.querySelector(`[data-id="${CSS.escape(idFocado)}"]`)?.focus({ preventScroll: true });
+}
+
+function atualizarHorarioExtracao() {
+  const grupo = obterGrupoAtivo();
+  const alvo = $('activeGroupExtractedAt');
+  if (alvo && !$('activeGroupView').hidden && !$('mainView').hidden && !document.hidden) {
+    alvo.textContent = grupo?.extractedAt ? tempoRelativo(grupo.extractedAt, Date.now()) : '';
+  }
+}
+
+function sincronizarVisao() {
+  const { modo, tamanhoGrade, abaAtiva, visoes } = obterEstado();
+  for (const botao of document.querySelectorAll('[data-modo]')) botao.setAttribute('aria-pressed', String(botao.dataset.modo === modo));
+  $('tamanhoGradeControles').hidden = modo !== 'grade';
+  for (const botao of document.querySelectorAll('[data-tamanho-grade]')) botao.setAttribute('aria-pressed', String(botao.dataset.tamanhoGrade === tamanhoGrade));
+  const busca = visoes.get(abaAtiva)?.busca || '';
+  if ($('memberSearch').value !== busca) $('memberSearch').value = busca;
 }
 
 function mostrarGrupo(grupo) {
@@ -201,6 +224,7 @@ function mostrarGrupo(grupo) {
   if (duracaoEl) {
     duracaoEl.textContent = grupo.durationSec ? `${grupo.durationSec}s` : 'Cache';
   }
+  sincronizarVisao();
   renderizarChipsDeFiltro(lista);
   renderizarListaDeParticipantes(grupo);
 }
@@ -371,17 +395,26 @@ export function iniciarGrupo() {
     if (chaves.some((c) => CHAVES_GRUPO.includes(c))) renderizarGrupo();
     if (!estado.abaAtiva && chaves.some((c) => CHAVES_TELA_INICIAL.includes(c))) renderizarTelaInicial($('emptyDetail'));
   });
+  const relogio = setInterval(atualizarHorarioExtracao, 60000);
+  relogio.unref?.();
+  document.addEventListener('visibilitychange', atualizarHorarioExtracao);
+  for (const botao of document.querySelectorAll('[data-modo]')) botao.addEventListener('click', () => atualizarEstado({ modo: botao.dataset.modo }));
+  for (const botao of document.querySelectorAll('[data-tamanho-grade]')) botao.addEventListener('click', () => atualizarEstado({ tamanhoGrade: botao.dataset.tamanhoGrade }));
   $('refreshActiveGroupBtn').addEventListener('click', recarregarAtivo);
   $('avisoGrupoBtn').addEventListener('click', () => { if (acaoDoAviso) acaoDoAviso(); });
   $('copyPhonesBtn').addEventListener('click', comParticipantes(copiarTelefones));
 
   const campoBusca = $('memberSearch');
   if (campoBusca) {
+    let abaDaBusca;
     const buscaDebounce = debounce((valor) => {
-      const { abaAtiva } = obterEstado();
-      if (abaAtiva) atualizarVisao(abaAtiva, { busca: valor });
+      if (abaDaBusca && obterEstado().recentes.some((r) => r.id === abaDaBusca)) atualizarVisao(abaDaBusca, { busca: valor });
     }, 200);
-    campoBusca.addEventListener('input', (e) => buscaDebounce.chamar(e.target.value));
+    campoBusca.addEventListener('input', (e) => {
+      abaDaBusca = obterEstado().abaAtiva;
+      buscaDebounce.chamar(e.target.value);
+    });
+    aoMudar((_, chaves) => { if (chaves.includes('abaAtiva')) buscaDebounce.cancelar(); });
   }
 
   iniciarPreferenciasDoGrupo();

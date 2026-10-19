@@ -12,7 +12,8 @@ export function renderizarGrade(conteiner, participantes, { tamanho, aoAbrir, fi
   const grid = document.createElement('div');
   grid.className = 'grade-participantes';
   grid.dataset.tamanho = tamanho;
-  grid.setAttribute('role', 'list');
+  grid.setAttribute('role', 'group');
+  grid.setAttribute('aria-label', 'Participantes');
 
   if (participantes.length === 0) {
     const vazio = document.createElement('p');
@@ -27,7 +28,6 @@ export function renderizarGrade(conteiner, participantes, { tamanho, aoAbrir, fi
         selecionado: p.id === fichaAberta,
         aoAbrir,
       });
-      card.setAttribute('role', 'listitem');
       fragment.appendChild(card);
     }
     grid.appendChild(fragment);

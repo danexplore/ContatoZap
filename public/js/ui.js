@@ -102,8 +102,12 @@ export function abrirPreviewFoto(url, nome) {
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', nome ? `Foto de ${nome}` : 'Foto de perfil');
 
-  const fechar = () => { overlay.remove(); document.removeEventListener('keydown', aoTeclar); };
-  const aoTeclar = (e) => { if (e.key === 'Escape') fechar(); };
+  const origem = document.activeElement;
+  const fechar = () => { overlay.remove(); document.removeEventListener('keydown', aoTeclar); origem?.focus({ preventScroll: true }); };
+  const aoTeclar = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); fechar(); }
+    if (e.key === 'Tab') { e.preventDefault(); botaoFechar.focus(); }
+  };
   overlay.addEventListener('click', fechar);
 
   const img = document.createElement('img');

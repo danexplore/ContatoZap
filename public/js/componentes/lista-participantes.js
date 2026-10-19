@@ -86,7 +86,7 @@ export function criarListaParticipantes({ participantes, ordenacao, aoOrdenar, a
 
       tr.addEventListener('click', () => aoAbrir(p.id));
       tr.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); aoAbrir(p.id); }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aoAbrir(p.id); }
       });
 
       for (const col of COLUNAS) {

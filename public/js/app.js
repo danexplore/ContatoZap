@@ -5,10 +5,10 @@ import { aoMudar, atualizarEstado, iniciarEstado, obterEstado } from './estado.j
 import { iniciarConexao } from './conexao.js';
 import { atualizarTamanhoGrupo, iniciarSidebar } from './sidebar.js';
 import { iniciarGrupo } from './grupo.js';
-import { ativarRedimensionamentoFoto, iniciarLista } from './lista.js';
 import { iniciarAbas } from './abas.js';
 import { abrirLote, atualizarLote, finalizarLote, iniciarDrawerLote } from './lote.js';
 import { iniciarBuscaRapida } from './busca-rapida.js';
+import { iniciarFicha } from './ficha.js';
 
 function aplicarTema(tema) {
   const escuro = tema === 'dark';
@@ -30,11 +30,10 @@ iniciarTema();
 iniciarConexao();
 iniciarSidebar();
 iniciarGrupo();
-iniciarLista();
 iniciarAbas();
-ativarRedimensionamentoFoto();
 iniciarDrawerLote();
 iniciarBuscaRapida();
+iniciarFicha();
 
 conectarEventos({
   state: (conexao) => atualizarEstado({ conexao }),
