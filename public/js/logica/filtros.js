@@ -16,15 +16,32 @@ export function contarFiltros(ps) {
   return contagem;
 }
 
-function casaBusca(p, busca, digitosBusca) {
-  if ([p.pushname, p.name, p.savedName].some((nome) => contemTexto(nome, busca))) return true;
-  return Boolean(digitosBusca) && apenasDigitos(p.phone).includes(digitosBusca);
+function palavras(termo) {
+  return normalizar(termo).split(/\s+/).filter(Boolean);
+}
+
+// Busca sem letras é um telefone, mesmo com espaços ("+55 11 9876"): compara os dígitos juntos.
+function casaTelefoneInteiro(p, busca) {
+  const digitos = apenasDigitos(busca);
+  return Boolean(digitos) && apenasDigitos(p.phone).includes(digitos);
+}
+
+// Com letras, cada palavra precisa bater em algum nome ou no telefone.
+function casaBusca(p, busca) {
+  const termos = palavras(busca);
+  if (!termos.length) return true;
+  if (!/\p{L}/u.test(busca)) return casaTelefoneInteiro(p, busca);
+  const telefone = apenasDigitos(p.phone);
+  return termos.every((termo) => {
+    if ([p.pushname, p.name, p.savedName].some((nome) => contemTexto(nome, termo))) return true;
+    const digitos = apenasDigitos(termo);
+    return Boolean(digitos) && telefone.includes(digitos);
+  });
 }
 
 export function filtrarParticipantes(ps, { filtro = 'todos', busca = '' } = {}) {
   const passa = PASSA_NO_FILTRO[filtro] || PASSA_NO_FILTRO.todos;
-  const digitosBusca = apenasDigitos(busca);
-  return ps.filter((p) => passa(p) && casaBusca(p, busca, digitosBusca));
+  return ps.filter((p) => passa(p) && casaBusca(p, busca));
 }
 
 // Mesmos valores das colunas do Excel; a tabela ordena por eles.
@@ -51,7 +68,8 @@ export function ordenarParticipantes(ps, coluna, asc) {
 }
 
 export function filtrarGrupos(grupos, termo) {
-  return grupos.filter((g) => contemTexto(g.name, termo));
+  const termos = palavras(termo);
+  return grupos.filter((g) => termos.every((t) => contemTexto(g.name, t)));
 }
 
 export function separarSecoes(grupos, fixados) {

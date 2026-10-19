@@ -39,6 +39,21 @@ test('filtrarParticipantes ignora formatação do telefone', () => {
   }
 });
 
+test('filtrarParticipantes exige que cada palavra bata em algum campo', () => {
+  const nomes = (busca) => filtrarParticipantes(ps, { busca }).map((p) => p.pushname);
+  assert.deepEqual(nomes('joao 98765'), ['João']);
+  assert.deepEqual(nomes('joao 2222'), []);
+  assert.deepEqual(nomes('bia 9876'), []);
+  assert.deepEqual(nomes('beatriz acai'), ['Bia']);
+  assert.deepEqual(nomes('  joao   '), ['João']);
+});
+
+test('filtrarGrupos exige todas as palavras, em qualquer ordem', () => {
+  const grupos = [{ id: '1@g.us', name: 'Condomínio Ed. Sol' }, { id: '2@g.us', name: 'Sol Nascente' }];
+  assert.deepEqual(filtrarGrupos(grupos, 'sol condominio').map((g) => g.id), ['1@g.us']);
+  assert.deepEqual(filtrarGrupos(grupos, 'SOL').map((g) => g.id), ['1@g.us', '2@g.us']);
+});
+
 test('filtrarParticipantes combina filtro e busca', () => {
   assert.equal(filtrarParticipantes(ps, { filtro: 'admins', busca: 'dani' }).length, 1);
   assert.equal(filtrarParticipantes(ps, { filtro: 'telefone', busca: 'ana' }).length, 0);
