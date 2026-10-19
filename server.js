@@ -14,6 +14,10 @@ const HOST = process.env.HOST || '127.0.0.1'; // apenas local
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const msg = (err) => (err && err.message ? err.message : String(err));
 
+// O WhatsApp Web às vezes recarrega a página durante a inicialização; uma nova tentativa resolve.
+const MAX_INIT_RETRIES = 2;
+const isTransientInitError = (err) => /Execution context was destroyed|detached Frame|Target closed/i.test(msg(err));
+
 // Sessão armazenada em SQLite local (session.db)
 const store = new SqliteStore({ dbPath: path.join(__dirname, 'session.db') });
 
@@ -31,6 +35,7 @@ const state = {
 
 let client = null;
 let loadingGroups = false;
+let clientReady = false;
 const participantsCache = new Map(); // id -> { data, timestamp }
 const sseClients = new Set();
 let currentBatch = null; // { cancelRequested: boolean }
@@ -178,8 +183,9 @@ async function stopClient() {
   }
 }
 
-async function startClient() {
+async function startClient(retry = 0) {
   await stopClient();
+  clientReady = false;
   setState({
     status: 'starting',
     message: 'Iniciando WhatsApp...',
@@ -266,6 +272,7 @@ async function startClient() {
   c.on('disconnected', (reason) => {
     if (live()) {
       log.warn('CLIENT', `WhatsApp desconectado: ${reason}`);
+      clientReady = false;
       setState({
         status: 'error',
         qr: null,
@@ -293,6 +300,7 @@ async function startClient() {
   c.on('ready', () => {
     if (live()) {
       log.success('CLIENT', 'WhatsApp Web pronto e conectado!');
+      clientReady = true;
       setState({ syncProgress: null });
       loadGroups();
     }
@@ -306,6 +314,14 @@ async function startClient() {
     log.info('CLIENT', 'Inicializando navegador Puppeteer...');
     await c.initialize();
   } catch (err) {
+    if (live() && isTransientInitError(err) && retry < MAX_INIT_RETRIES) {
+      const next = retry + 1;
+      log.warn('CLIENT', `WhatsApp Web recarregou durante a inicialização (${msg(err)}). Reiniciando (tentativa ${next}/${MAX_INIT_RETRIES})...`);
+      setState({ message: `Reconectando ao WhatsApp (tentativa ${next}/${MAX_INIT_RETRIES})...` });
+      await sleep(3000);
+      if (live()) startClient(next);
+      return;
+    }
     if (live()) {
       log.error('CLIENT', `Não foi possível iniciar o WhatsApp: ${msg(err)}`);
       setState({
@@ -512,7 +528,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/api/retry-groups') {
       log.info('API', 'Recebida solicitação de recarregar grupos');
-      if (client) loadGroups();
+      if (client && clientReady) loadGroups();
       else startClient();
       sendJson(res, 200, { ok: true });
       return logDone(200);
