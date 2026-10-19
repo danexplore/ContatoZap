@@ -1,7 +1,8 @@
 // Tabela de participantes do grupo aberto: filtro por abas, busca, ordenação, paginação e coluna Foto.
 import { $, ICONES, copiarTexto, abrirPreviewFoto } from './ui.js';
 import { obterGrupoAtivo } from './grupo.js';
-import { limparDigitos, paraLinhaExcel } from './exportar.js';
+import { paraLinhaExcel } from './exportar.js';
+import { apenasDigitos, formatarTelefone } from './logica/texto.js';
 
 // Mesmas colunas do Excel, mais # e Foto
 const COLUNAS_TABELA = 7;
@@ -13,19 +14,6 @@ let colunaOrdem = null;
 let ordemCrescente = true;
 let paginaAtual = 1;
 let tamanhoPagina = 50;
-
-function formatarTelefone(telefone) {
-  const digitos = limparDigitos(telefone);
-  if (!digitos) return '—';
-  if (digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13)) {
-    const ddd = digitos.slice(2, 4);
-    const resto = digitos.slice(4);
-    if (resto.length === 9) return `+55 (${ddd}) ${resto.slice(0, 5)}-${resto.slice(5)}`;
-    if (resto.length === 8) return `+55 (${ddd}) ${resto.slice(0, 4)}-${resto.slice(4)}`;
-  }
-  if (digitos.length > 7) return `+${digitos.slice(0, 2)} ${digitos.slice(2, 6)} ${digitos.slice(6)}`;
-  return `+${digitos}`;
-}
 
 function criarAvatarReserva(nome) {
   const el = document.createElement('span');
@@ -103,7 +91,7 @@ function criarCelulaTelefone(p) {
     botao.title = 'Copiar telefone';
     botao.setAttribute('aria-label', `Copiar telefone ${formatarTelefone(p.phone)}`);
     botao.innerHTML = ICONES.copy;
-    botao.addEventListener('click', (e) => { e.stopPropagation(); copiarTexto(limparDigitos(p.phone), 'Telefone copiado!'); });
+    botao.addEventListener('click', (e) => { e.stopPropagation(); copiarTexto(apenasDigitos(p.phone), 'Telefone copiado!'); });
     envoltorio.appendChild(botao);
   }
   td.appendChild(envoltorio);

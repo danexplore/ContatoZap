@@ -1,7 +1,8 @@
 // Drawer da extração em lote: progresso, resumo e exportações consolidadas.
 import { $, baixarArquivo, copiarTexto, mostrarAviso } from './ui.js';
 import { cancelarLote } from './api.js';
-import { executarExportacaoExcel, gerarCsv, limparDigitos, montarPlanilha } from './exportar.js';
+import { executarExportacaoExcel, gerarCsv, montarPlanilha } from './exportar.js';
+import { apenasDigitos } from './logica/texto.js';
 
 let resultadosLote = [];
 
@@ -36,7 +37,7 @@ export function finalizarLote(resultados, cancelado = false) {
   $('batchCurrentGroupText').textContent = cancelado ? 'Lote cancelado' : 'Concluído!';
   let totalContatos = 0;
   const telefonesUnicos = new Set();
-  resultadosLote.forEach((g) => { (g.participants || []).forEach((p) => { totalContatos++; if (p.phone && !p.hidden) telefonesUnicos.add(limparDigitos(p.phone)); }); });
+  resultadosLote.forEach((g) => { (g.participants || []).forEach((p) => { totalContatos++; if (p.phone && !p.hidden) telefonesUnicos.add(apenasDigitos(p.phone)); }); });
   $('batchSummaryTotal').textContent = totalContatos;
   $('batchSummaryUnique').textContent = telefonesUnicos.size;
   $('batchCompletedSummary').hidden = false;
@@ -54,7 +55,7 @@ function participantesDoLote(desduplicar) {
   const linhas = [];
   for (const g of resultadosLote) {
     for (const p of (g.participants || [])) {
-      const telefone = limparDigitos(p.phone);
+      const telefone = apenasDigitos(p.phone);
       if (desduplicar && telefone && !p.hidden) {
         if (vistos.has(telefone)) continue;
         vistos.add(telefone);
@@ -67,14 +68,14 @@ function participantesDoLote(desduplicar) {
 
 function copiarTelefonesLote() {
   const telefones = [];
-  resultadosLote.forEach((g) => { (g.participants || []).forEach((p) => { if (p.phone && !p.hidden) telefones.push(limparDigitos(p.phone)); }); });
+  resultadosLote.forEach((g) => { (g.participants || []).forEach((p) => { if (p.phone && !p.hidden) telefones.push(apenasDigitos(p.phone)); }); });
   copiarTexto([...new Set(telefones)].join('\r\n'), `${new Set(telefones).size} telefones únicos copiados!`);
 }
 
 function baixarCsvLote() {
   const linhas = [['grupo_origem', 'nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status', 'foto_perfil']];
   for (const { participante: p, nomeGrupo } of participantesDoLote($('batchDeduplicateCheck').checked)) {
-    const telefone = limparDigitos(p.phone);
+    const telefone = apenasDigitos(p.phone);
     linhas.push([nomeGrupo, p.pushname || p.name || '', p.savedName || '', telefone ? '+' + telefone : '', p.admin ? 'sim' : 'não', p.hidden ? 'LID' : 'Normal', p.photoUrl || '']);
   }
   baixarArquivo(new Blob([gerarCsv(linhas)], { type: 'text/csv;charset=utf-8' }), `extracao_consolidada_${Date.now()}.csv`);

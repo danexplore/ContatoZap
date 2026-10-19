@@ -1,15 +1,14 @@
 // Exportação do grupo inteiro (CSV, Excel com fotos, JSON) e cópia de telefones.
 import { $, baixarArquivo, copiarTexto, mostrarAviso } from './ui.js';
 import { estaSincronizando, BOTOES_EXPORTACAO } from './conexao.js';
+import { apenasDigitos } from './logica/texto.js';
 
 const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const PX_PARA_PONTOS = 0.75;
 const PX_POR_CARACTERE_EXCEL = 7;
 
-export function limparDigitos(telefone) { return String(telefone || '').replace(/\D/g, ''); }
-
 export function paraLinhaExcel(p) {
-  const telefone = limparDigitos(p.phone);
+  const telefone = apenasDigitos(p.phone);
   return {
     preview: '',
     nome_whatsapp: p.pushname || p.name || '',
@@ -32,13 +31,13 @@ function nomeArquivo(grupo, extensao) {
 }
 
 export function copiarTelefones(grupo) {
-  const telefones = grupo.participants.filter((p) => p.phone && !p.hidden).map((p) => limparDigitos(p.phone));
+  const telefones = grupo.participants.filter((p) => p.phone && !p.hidden).map((p) => apenasDigitos(p.phone));
   copiarTexto([...new Set(telefones)].join('\r\n'), `${new Set(telefones).size} números copiados!`);
 }
 
 export function exportarCsv(grupo) {
   const linhas = [['nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status', 'foto_perfil']].concat(
-    grupo.participants.map((p) => [p.pushname || p.name || '', p.savedName || '', p.phone ? '+' + limparDigitos(p.phone) : '', p.admin ? 'sim' : 'não', p.hidden ? 'LID' : 'Normal', p.photoUrl || ''])
+    grupo.participants.map((p) => [p.pushname || p.name || '', p.savedName || '', p.phone ? '+' + apenasDigitos(p.phone) : '', p.admin ? 'sim' : 'não', p.hidden ? 'LID' : 'Normal', p.photoUrl || ''])
   );
   baixarArquivo(new Blob([gerarCsv(linhas)], { type: 'text/csv;charset=utf-8' }), nomeArquivo(grupo, 'csv'));
 }
