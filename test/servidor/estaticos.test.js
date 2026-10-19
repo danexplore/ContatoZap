@@ -94,3 +94,31 @@ test('servirArquivoPublico dá 404 para inexistente, diretório e caminho recusa
     assert.match(r.headers['Content-Type'], /^text\/plain/, p);
   }
 });
+
+test('servirArquivoPublico não segue symlink que aponta para fora de js/ e css/', async (t) => {
+  const arquivoLink = path.join(raiz, 'js', 'link.js');
+  const pastaLink = path.join(raiz, 'css', 'pasta-link');
+  try {
+    fs.symlinkSync(path.join(raiz, 'segredo.txt'), arquivoLink);
+    fs.symlinkSync(irmao, pastaLink, 'dir');
+  } catch (err) {
+    fs.rmSync(arquivoLink, { force: true });
+    return t.skip(`plataforma não permite symlink: ${err.code}`);
+  }
+  for (const p of ['/js/link.js', '/css/pasta-link/x.js']) {
+    const r = await servir(p);
+    assert.equal(r.statusCode, 404, p);
+    assert.doesNotMatch(String(r.body), /segredo|alert/, p);
+  }
+});
+
+test('servirArquivoPublico segue symlink que continua dentro da pasta pública', async (t) => {
+  const interno = path.join(raiz, 'js', 'interno.js');
+  try {
+    fs.symlinkSync(path.join(raiz, 'js', 'a.js'), interno);
+  } catch (err) {
+    return t.skip(`plataforma não permite symlink: ${err.code}`);
+  }
+  const r = await servir('/js/interno.js');
+  assert.equal(r.statusCode, 200);
+});
