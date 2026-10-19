@@ -9,6 +9,7 @@ const { SqliteStore } = require('./sqlite-store');
 const { listGroups, getGroupParticipants, getGroupPhoto } = require('./whatsapp-extractor');
 const log = require('./logger');
 const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
+const { criarDownloadGradePdf } = require('./lib/grade-pdf');
 const { urlLocal } = require('./lib/url-local');
 const { criarCacheFotos, lerIdsFotos } = require('./lib/fotos-grupos');
 const { lerCacheParticipantes, gruposDoContato } = require('./lib/cache-participantes');
@@ -517,6 +518,12 @@ function sendJson(res, code, data) {
   res.end(JSON.stringify(data));
 }
 
+const baixarGradePdf = criarDownloadGradePdf({
+  cache: participantsCache,
+  obterBrowser: () => state.status === 'ready' ? client?.pupBrowser : null,
+  estaSincronizando: () => Boolean(state.syncProgress),
+});
+
 const server = http.createServer(async (req, res) => {
   const startAt = Date.now();
   const url = urlLocal(req.url);
@@ -633,6 +640,29 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && (url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/'))) {
       await servirArquivoPublico(res, RAIZ_PUBLICA, url.pathname);
       return logDone(res.statusCode);
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/group-pdf') {
+      let pedido;
+      try { pedido = await parseJsonBody(req, 8192); } catch {
+        sendJson(res, 400, { error: 'Pedido de PDF inválido.' });
+        return logDone(400);
+      }
+      try {
+        const pdf = await baixarGradePdf(pedido);
+        res.writeHead(200, {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="grade.pdf"',
+          'Cache-Control': 'no-store',
+          'Content-Length': pdf.length,
+        });
+        res.end(pdf);
+        return logDone(200);
+      } catch (err) {
+        const status = err.status || 500;
+        sendJson(res, status, { error: err.status ? err.message : 'Não foi possível gerar o PDF. Tente novamente.' });
+        return logDone(status);
+      }
     }
 
     if (req.method === 'GET' && url.pathname === '/api/contact-groups') {

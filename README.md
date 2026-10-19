@@ -155,7 +155,7 @@ O WhatsApp respeita estritamente as preferências de privacidade de cada usuári
 
 Execute `npm test` para verificar a suíte. Para conferir a interface, use `npm run watch` e abra `http://localhost:3000`.
 
-**Imprimir a grade em PDF:** abra um grupo, selecione **Grade** e clique em **Imprimir / PDF**, ao lado de P/M/G. No diálogo do navegador, escolha **Salvar como PDF**. A impressão usa os filtros, a busca e a ordem atuais; inclui o nome do grupo e fotos disponíveis, distribuindo os cartões em páginas A4. Os demais formatos de exportação continuam usando o grupo inteiro.
+**Baixar a grade em PDF:** abra um grupo, selecione **Grade** e clique em **Baixar PDF**, ao lado de P/M/G. O arquivo é baixado diretamente. Para usar uma impressora, clique em **Imprimir**. A impressão usa os filtros, a busca e a ordem atuais; inclui o nome do grupo e fotos disponíveis, distribuindo os cartões em páginas A4. Os demais formatos de exportação continuam usando o grupo inteiro.
 
 A interface oferece grupos fixados e recentes, busca rápida com Ctrl+K (⌘K no Mac), lista ou grade com tamanhos P/M/G e ficha do participante. Na ficha, ↑/↓ percorrem os participantes filtrados e Esc fecha. A seção “Também está em” consulta somente grupos já extraídos nesta execução.
 
