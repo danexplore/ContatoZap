@@ -53,3 +53,8 @@ export function tempoRelativo(timestamp, agora) {
   const dias = Math.floor(decorrido / DIA);
   return dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
 }
+
+// Tamanho do grupo; 0 ou desconhecido = a contagem ainda não veio do WhatsApp
+export function textoMembros(total) {
+  return total > 0 ? `${total} ${total === 1 ? 'membro' : 'membros'}` : 'Membros pendentes';
+}

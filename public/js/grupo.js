@@ -3,12 +3,17 @@ import { $, mostrarAviso } from './ui.js';
 import { buscarGrupo } from './api.js';
 import { aoMudar, atualizarEstado, obterEstado, FOTO_EXCEL_MIN, FOTO_EXCEL_MAX } from './estado.js';
 import { atualizarTamanhoGrupo } from './sidebar.js';
-import { fecharAba } from './abas.js';
+import { abrirGrupo, fecharAba } from './abas.js';
 import { copiarTelefones, exportarCsv, exportarExcel, exportarJson } from './exportar.js';
-import { contarFiltros } from './logica/filtros.js';
+import { contarFiltros, separarSecoes } from './logica/filtros.js';
+import { textoMembros } from './logica/texto.js';
+import { criarAvatar } from './componentes/avatar.js';
+import { observarFotoGrupo } from './fotos-grupos.js';
 
 // conexao: a lista de grupos decide o "Grupo não encontrado"
 const CHAVES_GRUPO = ['abaAtiva', 'grupos', 'conexao'];
+const CHAVES_TELA_INICIAL = ['abaAtiva', 'conexao', 'fixados', 'fotosGrupos'];
+const TAMANHO_AVATAR_ATALHO = 40;
 
 // `${id}:basic|with_photos` -> GrupoExtraido (memória das respostas da API, não é estado de tela)
 const cacheCliente = new Map();
@@ -139,6 +144,77 @@ function renderizarGrupo() {
   }
 }
 
+/* ========== TELA INICIAL (nenhuma aba aberta) ========== */
+const ehMac = () => /Mac/i.test((globalThis.navigator && globalThis.navigator.platform) || '');
+
+function criarAtalho(g, foto) {
+  const nome = g.name || '(Sem nome)';
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = 'atalho-grupo';
+  botao.dataset.atalho = g.id;
+  const textos = document.createElement('span');
+  textos.className = 'atalho-textos';
+  const nomeEl = document.createElement('span');
+  nomeEl.className = 'atalho-nome';
+  nomeEl.textContent = nome;
+  nomeEl.title = nome;
+  const sub = document.createElement('span');
+  sub.className = 'atalho-sub';
+  sub.textContent = textoMembros(g.size);
+  textos.append(nomeEl, sub);
+  botao.append(criarAvatar({ id: g.id, nome: g.name, foto, tamanho: TAMANHO_AVATAR_ATALHO }), textos);
+  botao.addEventListener('click', () => abrirGrupo(g));
+  observarFotoGrupo(botao, g.id);
+  const item = document.createElement('li');
+  item.appendChild(botao);
+  return item;
+}
+
+function criarDicaBusca() {
+  const tecla = (texto) => {
+    const kbd = document.createElement('kbd');
+    kbd.textContent = texto;
+    return kbd;
+  };
+  const dica = document.createElement('p');
+  dica.className = 'tela-inicial-dica';
+  dica.append('Pressione ', tecla(ehMac() ? '⌘' : 'Ctrl'), ' ', tecla('K'), ' para buscar um grupo');
+  return dica;
+}
+
+// Fixados como atalhos e a dica do Ctrl+K. Só redesenha quando os atalhos mudam (o SSE chega a todo momento).
+export function renderizarTelaInicial(conteiner) {
+  const { fixados, conexao, fotosGrupos } = obterEstado();
+  const atalhos = separarSecoes(conexao.groups || [], fixados).fixados;
+  const assinatura = JSON.stringify(atalhos.map((g) => [g.id, g.name, g.size, fotosGrupos.get(g.id) || null]));
+  if (conteiner.dataset.assinatura === assinatura) return;
+  conteiner.dataset.assinatura = assinatura;
+  const ativo = document.activeElement;
+  const focado = ativo && conteiner.contains(ativo) && ativo.dataset ? ativo.dataset.atalho : null;
+
+  const titulo = document.createElement('h2');
+  titulo.className = 'tela-inicial-titulo';
+  titulo.textContent = 'Escolha um grupo';
+
+  let corpo;
+  if (atalhos.length) {
+    corpo = document.createElement('ul');
+    corpo.className = 'tela-inicial-atalhos';
+    corpo.setAttribute('aria-label', 'Grupos fixados');
+    corpo.append(...atalhos.map((g) => criarAtalho(g, fotosGrupos.get(g.id) || null)));
+  } else {
+    corpo = document.createElement('p');
+    corpo.textContent = 'Fixe grupos na barra lateral para vê-los aqui.';
+  }
+  conteiner.replaceChildren(titulo, corpo, criarDicaBusca());
+
+  if (focado) {
+    const alvo = conteiner.querySelector(`[data-atalho="${CSS.escape(focado)}"]`);
+    if (alvo) alvo.focus({ preventScroll: true });
+  }
+}
+
 function comParticipantes(acao) {
   return () => { const grupo = obterGrupoAtivo(); if (grupo && grupo.participants) acao(grupo); };
 }
@@ -174,7 +250,10 @@ function iniciarPreferenciasDoGrupo() {
 }
 
 export function iniciarGrupo() {
-  aoMudar((_, chaves) => { if (chaves.some((c) => CHAVES_GRUPO.includes(c))) renderizarGrupo(); });
+  aoMudar((estado, chaves) => {
+    if (chaves.some((c) => CHAVES_GRUPO.includes(c))) renderizarGrupo();
+    if (!estado.abaAtiva && chaves.some((c) => CHAVES_TELA_INICIAL.includes(c))) renderizarTelaInicial($('emptyDetail'));
+  });
   $('refreshActiveGroupBtn').addEventListener('click', recarregarAtivo);
   $('avisoGrupoBtn').addEventListener('click', () => { if (acaoDoAviso) acaoDoAviso(); });
   $('copyPhonesBtn').addEventListener('click', comParticipantes(copiarTelefones));
@@ -183,4 +262,5 @@ export function iniciarGrupo() {
   $('exportJsonBtn').addEventListener('click', () => { const grupo = obterGrupoAtivo(); if (grupo) exportarJson(grupo); });
   iniciarPreferenciasDoGrupo();
   renderizarGrupo();
+  renderizarTelaInicial($('emptyDetail'));
 }

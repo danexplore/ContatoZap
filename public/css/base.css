@@ -31,6 +31,22 @@ body {
 .skip-link:focus { top: var(--space-2); }
 
 /* ========== UTILITIES ========== */
+/* Tecla (dicas de atalho) */
+kbd {
+  display: inline-block;
+  min-width: 1.75em;
+  padding: 0 var(--space-1);
+  border: 1px solid hsl(var(--color-border-strong));
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  background: hsl(var(--color-bg-secondary));
+  color: hsl(var(--color-text-primary));
+  font: var(--text-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;

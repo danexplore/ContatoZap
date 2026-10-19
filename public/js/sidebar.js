@@ -5,7 +5,7 @@ import { iniciarLote, recarregarGrupos } from './api.js';
 import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
 import { abrirGrupo } from './abas.js';
 import { filtrarGrupos, separarSecoes } from './logica/filtros.js';
-import { normalizar } from './logica/texto.js';
+import { normalizar, textoMembros } from './logica/texto.js';
 import { criarAvatar } from './componentes/avatar.js';
 import { criarEstrela } from './componentes/estrela.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
@@ -25,7 +25,6 @@ const SECOES = {
 
 const gruposDoServidor = () => obterEstado().conexao.groups || [];
 const nomeDoGrupo = (g) => g.name || '(Sem nome)';
-const textoMembros = (g) => (g.size > 0 ? `${g.size} ${g.size === 1 ? 'membro' : 'membros'}` : 'Membros pendentes');
 
 function gruposFiltrados() {
   return filtrarGrupos(gruposDoServidor(), $('groupSearch').value);
@@ -86,7 +85,7 @@ function criarItem(g, secao) {
 
   const sub = document.createElement('span');
   sub.className = 'group-sub';
-  sub.textContent = textoMembros(g);
+  sub.textContent = textoMembros(g.size);
 
   abrir.append(nomeEl, sub);
 

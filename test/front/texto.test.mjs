@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizar, contemTexto, apenasDigitos, formatarTelefone, iniciais, tempoRelativo,
+  normalizar, contemTexto, apenasDigitos, formatarTelefone, iniciais, tempoRelativo, textoMembros,
 } from '../../public/js/logica/texto.js';
 
 test('normalizar tira acento, espaço das pontas e caixa alta', () => {
@@ -61,4 +61,11 @@ test('tempoRelativo', () => {
   assert.equal(tempoRelativo(0, 2 * 86_400_000), 'há 2 dias');
   assert.equal(tempoRelativo(0, 60_000), 'há 1 min');
   assert.equal(tempoRelativo(0, 3_600_000), 'há 1 h');
+});
+
+test('textoMembros: singular, plural e tamanho ainda desconhecido', () => {
+  assert.equal(textoMembros(1), '1 membro');
+  assert.equal(textoMembros(2), '2 membros');
+  assert.equal(textoMembros(0), 'Membros pendentes');
+  assert.equal(textoMembros(undefined), 'Membros pendentes');
 });
