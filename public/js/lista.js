@@ -1,6 +1,7 @@
 // Tabela de participantes do grupo aberto: filtro por abas, busca, ordenação, paginação e coluna Foto.
 import { $, ICONES, copiarTexto, abrirPreviewFoto } from './ui.js';
 import { aoMudar, atualizarVisao, obterEstado, visaoDoGrupo } from './estado.js';
+import { criarAvatar } from './componentes/avatar.js';
 import { obterGrupoAtivo } from './grupo.js';
 import { apenasDigitos, formatarTelefone } from './logica/texto.js';
 import { filtrarParticipantes, linhaExportacao, ordenarParticipantes } from './logica/filtros.js';
@@ -15,16 +16,6 @@ let paginaAtual = 1;
 let tamanhoPagina = 50;
 // Grupo + filtro + busca da última renderização: se mudar, volta à primeira página
 let ultimaConsulta = '';
-
-function criarAvatarReserva(nome) {
-  const el = document.createElement('span');
-  el.className = 'avatar-fallback';
-  const limpo = String(nome || '').trim();
-  el.textContent = limpo ? limpo.charAt(0).toUpperCase() : '?';
-  el.title = 'Foto não acessível ou privada';
-  el.setAttribute('aria-label', `Avatar de ${limpo || 'usuário desconhecido'}`);
-  return el;
-}
 
 function criarCelulaTexto(texto) {
   const td = document.createElement('td');
@@ -49,21 +40,23 @@ function membrosFiltradosEOrdenados(visao) {
 function criarCelulaFoto(p) {
   const td = document.createElement('td');
   td.className = 'photo-cell';
+  const nomeExibido = p.pushname || p.name || '';
+  const avatar = criarAvatar({ id: p.id, nome: nomeExibido, foto: p.photoUrl || null, tamanho: 'preencher' });
+  const moldura = document.createElement('span');
+  moldura.className = 'member-avatar';
+  moldura.appendChild(avatar);
   if (p.photoUrl) {
-    const nomeExibido = p.pushname || p.name || '';
-    const img = document.createElement('img');
-    img.src = p.photoUrl;
-    img.className = 'member-avatar';
-    img.alt = nomeExibido || 'Foto';
-    img.loading = 'lazy';
-    img.referrerPolicy = 'no-referrer';
-    img.title = 'Clique para ver a foto ampliada';
-    img.addEventListener('click', (e) => { e.stopPropagation(); abrirPreviewFoto(p.photoUrl, nomeExibido); });
-    img.addEventListener('error', () => { img.replaceWith(criarAvatarReserva(nomeExibido)); });
-    td.appendChild(img);
-  } else {
-    td.appendChild(criarAvatarReserva(p.pushname || p.name));
+    // Só amplia enquanto a foto existe; se ela falhar, o avatar a remove e ficam as iniciais
+    moldura.classList.add('com-foto');
+    moldura.title = 'Clique para ver a foto ampliada';
+    avatar.querySelector('img').addEventListener('error', () => { moldura.classList.remove('com-foto'); moldura.title = ''; });
+    moldura.addEventListener('click', (e) => {
+      if (!moldura.classList.contains('com-foto')) return;
+      e.stopPropagation();
+      abrirPreviewFoto(p.photoUrl, nomeExibido);
+    });
   }
+  td.appendChild(moldura);
   return td;
 }
 

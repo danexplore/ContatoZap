@@ -336,6 +336,32 @@ select.styled-select:focus { outline: none; border-color: hsl(var(--color-border
   .toast-container { right: var(--space-4); top: auto; bottom: var(--space-4); }
 }
 
+/* ========== AVATAR (componentes/avatar.js) ========== */
+.avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+.avatar--circulo { border-radius: var(--radius-full); }
+.avatar--quadrado { border-radius: var(--radius-md); }
+/* Ocupa o pai; as iniciais acompanham o tamanho dele */
+.avatar--preencher { width: 100%; height: 100%; container-type: size; }
+.avatar--preencher .avatar-iniciais { font-size: 40cqmin; }
+.avatar-foto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Touch targets */
 @media (pointer: coarse) {
   .btn.sm { min-height: 44px; }

@@ -4,6 +4,7 @@ import { iniciarLote, recarregarGrupos } from './api.js';
 import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
 import { abrirGrupo } from './grupo.js';
 import { filtrarGrupos } from './logica/filtros.js';
+import { criarAvatar } from './componentes/avatar.js';
 
 // Lista e grupo ativo pedem redesenho; seleção só marca as caixas, sem tirar o foco do teclado.
 const CHAVES_REDESENHO = ['conexao', 'abaAtiva'];
@@ -62,7 +63,7 @@ function renderizarSidebar() {
     selo.className = 'badge neutral';
     selo.textContent = g.size > 0 ? `${g.size}` : '—';
 
-    li.append(caixa, info, selo);
+    li.append(caixa, criarAvatar({ id: g.id, nome: g.name }), info, selo);
     lista.appendChild(li);
   }
 }

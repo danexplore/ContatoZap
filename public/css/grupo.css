@@ -209,41 +209,25 @@ tr:hover .copy-icon-btn { opacity: 1; }
 .tag-badge.member { background: hsl(var(--color-bg-tertiary)); color: hsl(var(--color-text-tertiary)); }
 .tag-badge.lid { background: hsl(var(--color-warning-subtle)); color: hsl(var(--color-warning)); }
 
-/* ========== AVATAR ========== */
-.member-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 2px solid hsl(var(--color-bg-primary));
-  display: inline-block;
-  vertical-align: middle;
-  background: hsl(var(--color-bg-secondary));
-  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
-}
-.member-avatar:hover { transform: scale(1.15); box-shadow: var(--shadow-md); }
-
+/* ========== AVATAR NA TABELA ========== */
 /* O tamanho do avatar define a largura da coluna Foto (redimensionável).
    Largura só no <th> é ignorada quando a tabela passa da tela. */
 table { --photo-avatar-size: 40px; }
 td.photo-cell { padding-inline: var(--space-2); text-align: center; }
-td.photo-cell .member-avatar,
-td.photo-cell .avatar-fallback { width: var(--photo-avatar-size); height: var(--photo-avatar-size); }
-td.photo-cell .member-avatar { display: block; cursor: zoom-in; }
-
-.avatar-fallback {
-  width: 36px;
-  height: 36px;
+.member-avatar {
+  display: block;
+  width: var(--photo-avatar-size);
+  height: var(--photo-avatar-size);
+  margin-inline: auto;
   border-radius: var(--radius-full);
-  background: hsl(var(--color-primary-subtle));
-  color: hsl(var(--color-primary));
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font: var(--text-body-sm);
-  font-weight: 600;
   border: 2px solid hsl(var(--color-bg-primary));
-  user-select: none;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+.member-avatar.com-foto { cursor: zoom-in; }
+.member-avatar.com-foto:hover { transform: scale(1.15); box-shadow: var(--shadow-md); }
+@media (prefers-reduced-motion: reduce) {
+  .member-avatar { transition: none; }
+  .member-avatar.com-foto:hover { transform: none; }
 }
 
 /* ========== TABLE FOOTER / PAGINATION ========== */
