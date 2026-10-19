@@ -85,12 +85,33 @@
         <div class="selection-controls">
           <span><span id="selectedCount">0</span> selecionado(s)</span>
           <div>
-            <a id="selectAllBtn" role="button" tabindex="0">Marcar todos</a> · <a id="clearSelectionBtn" role="button" tabindex="0">Limpar</a>
+            <button type="button" class="link-botao" id="selectAllBtn">Marcar todos</button> · <button type="button" class="link-botao" id="clearSelectionBtn">Limpar</button>
           </div>
         </div>
       </div>
 
-      <ul id="groupList" class="group-list" role="listbox" aria-label="Grupos disponíveis"></ul>
+      <div id="groupList" class="group-list" aria-label="Grupos disponíveis">
+        <section class="sidebar-secao" aria-labelledby="secaoFixadosTitulo">
+          <h3 class="sidebar-secao-cabeca">
+            <button type="button" class="sidebar-secao-titulo" id="secaoFixadosTitulo" aria-expanded="true" aria-controls="secaoFixadosCorpo">
+              <span class="sidebar-secao-seta" aria-hidden="true"></span>
+              <span class="sidebar-secao-nome">Fixados</span>
+              <span class="sidebar-secao-contador" id="secaoFixadosContador">0</span>
+            </button>
+          </h3>
+          <ul class="sidebar-secao-corpo" id="secaoFixadosCorpo"></ul>
+        </section>
+        <section class="sidebar-secao" aria-labelledby="secaoTodosTitulo">
+          <h3 class="sidebar-secao-cabeca">
+            <button type="button" class="sidebar-secao-titulo" id="secaoTodosTitulo" aria-expanded="true" aria-controls="secaoTodosCorpo">
+              <span class="sidebar-secao-seta" aria-hidden="true"></span>
+              <span class="sidebar-secao-nome">Todos</span>
+              <span class="sidebar-secao-contador" id="secaoTodosContador">0</span>
+            </button>
+          </h3>
+          <ul class="sidebar-secao-corpo" id="secaoTodosCorpo"></ul>
+        </section>
+      </div>
 
       <div id="batchSidebarBar" class="batch-sidebar-bar" hidden>
         <div style="display:flex; flex-direction:column; gap:2px;">

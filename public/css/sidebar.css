@@ -20,35 +20,86 @@
   font: var(--text-body-sm);
   color: hsl(var(--color-text-tertiary));
 }
-.selection-controls a {
+.link-botao {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
   color: hsl(var(--color-primary));
   cursor: pointer;
-  text-decoration: none;
-  font-weight: 600;
 }
-.selection-controls a:hover { text-decoration: underline; }
+.link-botao:hover { text-decoration: underline; }
+.link-botao:focus-visible { outline: 2px solid hsl(var(--color-border-focus)); outline-offset: 2px; border-radius: var(--radius-sm); }
 
-/* Group List */
+/* Lista: seções Fixados e Todos */
 .group-list {
-  list-style: none;
   max-height: calc(100vh - 320px);
   min-height: 200px;
   overflow-y: auto;
   padding: var(--space-2);
 }
 
+.sidebar-secao + .sidebar-secao { margin-top: var(--space-2); }
+.sidebar-secao-cabeca { font: inherit; }
+.sidebar-secao-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  font: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  color: hsl(var(--color-text-tertiary));
+  cursor: pointer;
+}
+.sidebar-secao-titulo:hover { background: hsl(var(--color-bg-secondary)); color: hsl(var(--color-text-secondary)); }
+.sidebar-secao-titulo:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.sidebar-secao-seta {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 150ms ease-out;
+}
+.sidebar-secao-titulo[aria-expanded="false"] .sidebar-secao-seta { transform: rotate(-90deg); }
+.sidebar-secao-nome { flex: 1; }
+.sidebar-secao-contador {
+  min-width: 20px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: hsl(var(--color-bg-tertiary));
+  color: hsl(var(--color-text-secondary));
+  text-align: center;
+  letter-spacing: 0;
+}
+.sidebar-secao-corpo { list-style: none; }
+.sidebar-vazio {
+  padding: var(--space-2) var(--space-3);
+  font: var(--text-body-sm);
+  color: hsl(var(--color-text-tertiary));
+}
+
 .group-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background 150ms ease-out;
   user-select: none;
   content-visibility: auto;
-  contain-intrinsic-size: auto 44px;
+  contain-intrinsic-size: auto 48px;
   min-height: 44px;
 }
 .group-item:hover { background: hsl(var(--color-bg-secondary)); }
@@ -65,7 +116,8 @@
   gap: var(--space-2);
   cursor: pointer;
 }
-.checkbox-wrap input[type="checkbox"] {
+.checkbox-wrap input[type="checkbox"],
+.group-item input[type="checkbox"] {
   width: 16px;
   height: 16px;
   accent-color: hsl(var(--color-primary));
@@ -73,8 +125,25 @@
   flex-shrink: 0;
 }
 
-.group-info { flex: 1; min-width: 0; }
+.group-avatar { display: inline-flex; flex-shrink: 0; }
+.group-abrir {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.group-abrir:focus-visible { outline: 2px solid hsl(var(--color-border-focus)); outline-offset: 2px; border-radius: var(--radius-sm); }
 .group-name {
+  display: block;
+  max-width: 100%;
   font: var(--text-body);
   font-weight: 500;
   color: hsl(var(--color-text-primary));
@@ -82,7 +151,37 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.group-sub { font: var(--text-caption); color: hsl(var(--color-text-tertiary)); }
+.group-sub { display: block; font: var(--text-caption); color: hsl(var(--color-text-tertiary)); }
+
+/* Estrela de fixar (componentes/estrela.js): aparece no hover/foco; no fixado fica sempre visível */
+.estrela {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  line-height: 1;
+  color: hsl(var(--color-text-tertiary));
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease-out, background 120ms ease-out;
+}
+.group-item:hover .estrela,
+.group-item:focus-within .estrela,
+.estrela--ativa { opacity: 1; }
+.estrela:hover { background: hsl(var(--color-bg-tertiary)); color: hsl(var(--color-text-primary)); }
+.estrela:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.estrela--ativa,
+.estrela--ativa:hover { color: hsl(var(--color-warning)); }
+/* Sem mouse não há hover: a estrela fica sempre à vista */
+@media (hover: none) {
+  .estrela { opacity: 1; }
+}
 
 /* Batch sidebar bar */
 .batch-sidebar-bar {
@@ -98,4 +197,10 @@
 /* Touch targets (depois de .group-item para vencer na cascata) */
 @media (pointer: coarse) {
   .group-item { min-height: 48px; }
+  .estrela { width: var(--alvo-toque); height: var(--alvo-toque); }
+  .sidebar-secao-titulo { min-height: var(--alvo-toque); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group-item, .estrela, .sidebar-secao-seta { transition: none; }
 }
