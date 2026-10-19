@@ -22,7 +22,7 @@ const client = new Client({
   },
   puppeteer: {
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/opt/google/chrome/chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -31,6 +31,9 @@ const client = new Client({
       '--no-first-run',
       '--no-zygote',
       '--disable-gpu',
+      '--disable-web-security',
+      '--allow-running-insecure-content',
+      '--disable-features=IsolateOrigins,site-per-process',
     ],
   },
 });

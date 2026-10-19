@@ -202,7 +202,7 @@ async function startClient() {
     },
     puppeteer: {
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/opt/google/chrome/chrome',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -211,6 +211,9 @@ async function startClient() {
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu',
+        '--disable-web-security',
+        '--allow-running-insecure-content',
+        '--disable-features=IsolateOrigins,site-per-process',
       ],
     },
   });
@@ -411,6 +414,18 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html);
       return logDone(200);
+    }
+    if (req.method === 'GET' && url.pathname === '/exceljs.min.js') {
+      const exceljsPath = path.join(__dirname, 'node_modules/exceljs/dist/exceljs.min.js');
+      if (fs.existsSync(exceljsPath)) {
+        const content = fs.readFileSync(exceljsPath);
+        res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
+        res.end(content);
+        return logDone(200);
+      }
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('ExcelJS not found');
+      return logDone(404);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/events') {

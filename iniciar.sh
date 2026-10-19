@@ -22,5 +22,8 @@ if [ ! -d "node_modules" ]; then
     echo ""
 fi
 
+# Configurar caminho do Chrome do sistema para o Puppeteer
+export PUPPETEER_EXECUTABLE_PATH=/opt/google/chrome/chrome
+
 echo "[*] Iniciando o servidor..."
 npm start

@@ -535,23 +535,24 @@
 
   /* Avatar & Photo Styles */
   .member-avatar {
-    width: 36px;
-    height: 36px;
+    width: 100%;
+    aspect-ratio: 1;
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid var(--border);
-    display: inline-block;
+    display: block;
     vertical-align: middle;
     transition: transform 0.16s ease, box-shadow 0.16s ease;
     background: var(--surface-alt);
+    cursor: pointer;
   }
   .member-avatar:hover {
-    transform: scale(1.22);
+    transform: scale(1.15);
     box-shadow: var(--shadow-md);
   }
   .avatar-fallback {
-    width: 36px;
-    height: 36px;
+    width: 100%;
+    aspect-ratio: 1;
     border-radius: 50%;
     background: var(--surface-alt);
     color: var(--text-muted);
@@ -713,7 +714,82 @@
   .toast.success { border-left: 4px solid var(--accent); }
   .toast.error { border-left: 4px solid var(--danger); }
   .toast.info { border-left: 4px solid #3b82f6; }
+
+  /* ---------- Column Resize Handle ---------- */
+  .col-resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.15s;
+    z-index: 5;
+  }
+  .col-resize-handle:hover,
+  .col-resize-handle.active {
+    background: var(--accent);
+  }
+
+  /* ---------- Photo Preview Modal ---------- */
+  .photo-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+    cursor: pointer;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .photo-modal-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    object-fit: contain;
+    cursor: default;
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes scaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .photo-modal-close {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    z-index: 201;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .photo-modal-close:hover { background: rgba(255,255,255,0.3); }
+  .photo-modal-name {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 201;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
 </style>
+<script src="/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -817,6 +893,11 @@
             <button class="btn sm" id="refreshActiveGroupBtn" title="Buscar participantes mais recentes do WhatsApp">Atualizar</button>
             <button class="btn sm" id="copyPhonesBtn">Copiar Telefones</button>
             <button class="btn sm" id="exportCsvBtn">Baixar CSV</button>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;margin:0 8px;">
+              <span>📐 Tamanho foto:</span>
+              <input type="number" id="imageSizeInput" value="100" min="20" max="500" step="10" style="width:60px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg-secondary);color:var(--text);font-size:12px;">
+              <span>px</span>
+            </label>
             <button class="btn sm" id="exportExcelBtn">Baixar Excel</button>
             <button class="btn sm" id="exportJsonBtn">JSON</button>
           </div>
@@ -862,7 +943,7 @@
             <thead>
               <tr>
                 <th style="width:44px;">#</th>
-                <th style="width:56px; text-align:center;">Foto</th>
+                <th id="thPhoto" style="width:56px; text-align:center; position:relative; user-select:none;">Foto<span class="col-resize-handle" id="photoResizeHandle"></span></th>
                 <th class="sortable" data-sort="name">Nome <span class="sort-icon" id="sortIconName">▲</span></th>
                 <th class="sortable" data-sort="phone">Telefone <span class="sort-icon" id="sortIconPhone"></span></th>
                 <th class="sortable" data-sort="admin" style="width:120px;">Tipo <span class="sort-icon" id="sortIconAdmin"></span></th>
@@ -1412,24 +1493,21 @@
       tdPhoto.style.width = '56px';
 
       if (p.photoUrl) {
-        const link = document.createElement('a');
-        link.href = p.photoUrl;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.title = 'Clique para abrir foto em tamanho real';
-        link.style.display = 'inline-block';
-
         const img = document.createElement('img');
         img.src = p.photoUrl;
         img.className = 'member-avatar';
         img.alt = p.pushname || p.name || 'Foto';
         img.loading = 'lazy';
         img.referrerPolicy = 'no-referrer';
-        img.onerror = () => {
-          link.replaceWith(createFallbackAvatar(p.pushname || p.name));
+        img.title = 'Clique para ver foto ampliada';
+        img.onclick = (e) => {
+          e.stopPropagation();
+          openPhotoPreview(p.photoUrl, p.pushname || p.name || '');
         };
-        link.appendChild(img);
-        tdPhoto.appendChild(link);
+        img.onerror = () => {
+          img.replaceWith(createFallbackAvatar(p.pushname || p.name));
+        };
+        tdPhoto.appendChild(img);
       } else {
         tdPhoto.appendChild(createFallbackAvatar(p.pushname || p.name));
       }
@@ -1718,16 +1796,53 @@
     downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), filename);
   };
 
-  $('exportExcelBtn').onclick = () => {
+  $('exportExcelBtn').onclick = async () => {
     if (!activeGroup || !activeGroup.participants) return;
-    const xml = generateExcelXml([
-      {
-        groupName: activeGroup.name,
-        participants: activeGroup.participants,
-      },
-    ]);
-    const filename = `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.xls`;
-    downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), filename);
+    const workbook = new ExcelJS.Workbook();
+    const sheetName = (activeGroup.name || 'Grupo').substring(0, 31);
+    const worksheet = workbook.addWorksheet(sheetName);
+    worksheet.columns = [
+      { header: 'Preview', key: 'preview', width: 12 },
+      { header: 'Nome WhatsApp', key: 'nome_whatsapp', width: 25 },
+      { header: 'Nome Agenda', key: 'nome_agenda', width: 25 },
+      { header: 'Telefone', key: 'telefone', width: 18 },
+      { header: 'Admin', key: 'admin', width: 8 },
+      { header: 'Status', key: 'status', width: 20 },
+    ];
+    const imgSize = parseInt($('imageSizeInput').value) || 100;
+    // Ajusta a largura da coluna Preview proporcionalmente ao tamanho da imagem (aprox. 7px por caractere de largura)
+    worksheet.getColumn(1).width = Math.max(12, Math.round(imgSize / 7));
+
+    for (const p of activeGroup.participants) {
+      const phone = cleanDigits(p.phone);
+      const row = worksheet.addRow({
+        preview: '',
+        nome_whatsapp: p.pushname || p.name || '',
+        nome_agenda: p.savedName || '',
+        telefone: phone ? '+' + phone : '',
+        admin: p.admin ? 'sim' : 'não',
+        status: p.hidden ? 'ID de privacidade (LID)' : 'Normal',
+      });
+      // Altura da linha = tamanho da imagem + pequena margem superior/inferior
+      row.height = imgSize + 8;
+      if (p.photoUrl) {
+        try {
+          const response = await fetch(p.photoUrl);
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          const imageId = workbook.addImage({ buffer: arrayBuffer, extension: 'jpeg' });
+          worksheet.addImage(imageId, {
+            tl: { col: 0, row: row.number - 1 },
+            ext: { width: imgSize, height: imgSize }
+          });
+        } catch (e) {
+          console.warn('Falha ao carregar imagem:', e);
+        }
+      }
+    }
+    const buffer = await workbook.xlsx.writeBuffer();
+    const filename = `contatos_${(activeGroup.name || 'grupo').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_')}.xlsx`;
+    downloadBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
   };
 
   $('exportJsonBtn').onclick = () => {
@@ -1779,39 +1894,53 @@
     downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `extracao_consolidada_${Date.now()}.csv`);
   };
 
-  $('batchDownloadExcelBtn').onclick = () => {
+  $('batchDownloadExcelBtn').onclick = async () => {
     const deduplicate = $('batchDeduplicateCheck').checked;
     const seenPhones = new Set();
-
-    const flatGroups = [
-      {
-        groupName: 'Consolidado',
-        participants: [],
-      },
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Consolidado');
+    const imgSize = parseInt($('imageSizeInput').value) || 60;
+    worksheet.columns = [
+      { header: 'Preview', key: 'preview', width: Math.max(10, Math.round(imgSize / 7)) },
+      { header: 'Grupo Origem', key: 'grupo_origem', width: 25 },
+      { header: 'Nome WhatsApp', key: 'nome_whatsapp', width: 25 },
+      { header: 'Nome Agenda', key: 'nome_agenda', width: 25 },
+      { header: 'Telefone', key: 'telefone', width: 18 },
+      { header: 'Admin', key: 'admin', width: 8 },
+      { header: 'Status', key: 'status', width: 20 },
     ];
-
-    batchResults.forEach((g) => {
-      (g.participants || []).forEach((p) => {
+    for (const g of batchResults) {
+      for (const p of (g.participants || [])) {
         const phone = cleanDigits(p.phone);
         if (deduplicate && phone && !p.hidden) {
-          if (seenPhones.has(phone)) return;
+          if (seenPhones.has(phone)) continue;
           seenPhones.add(phone);
         }
-        flatGroups[0].participants.push({
-          groupName: g.name,
-          name: p.name,
-          pushname: p.pushname,
-          savedName: p.savedName,
-          phone: p.phone,
-          admin: p.admin,
-          hidden: p.hidden,
-          photoUrl: p.photoUrl || '',
+        const row = worksheet.addRow({
+          preview: '',
+          grupo_origem: g.name,
+          nome_whatsapp: p.pushname || p.name || '',
+          nome_agenda: p.savedName || '',
+          telefone: phone ? '+' + phone : '',
+          admin: p.admin ? 'sim' : 'não',
+          status: p.hidden ? 'ID de privacidade (LID)' : 'Normal',
         });
-      });
-    });
-
-    const xml = generateExcelXml(flatGroups, true);
-    downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), `extracao_consolidada_${Date.now()}.xls`);
+        row.height = Math.round(imgSize * 0.75) + 4;
+        if (p.photoUrl) {
+          try {
+            const response = await fetch(p.photoUrl);
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            const imageId = workbook.addImage({ buffer: arrayBuffer, extension: 'jpeg' });
+            worksheet.addImage(imageId, { tl: { col: 0, row: row.number - 1 }, ext: { width: imgSize, height: imgSize } });
+          } catch (e) {
+            console.warn('Falha ao carregar imagem:', e);
+          }
+        }
+      }
+    }
+    const buffer = await workbook.xlsx.writeBuffer();
+    downloadBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `extracao_consolidada_${Date.now()}.xlsx`);
   };
 
   // Helper para gerar planilha XML Spreadsheet compatível nativamente com Excel
@@ -1933,6 +2062,71 @@ ${columnsXml}${rowsXml}  </Table>
       }
     };
   }
+
+  /* ---------- Photo Preview Modal ---------- */
+  function openPhotoPreview(url, name) {
+    const overlay = document.createElement('div');
+    overlay.className = 'photo-modal-overlay';
+    overlay.onclick = () => overlay.remove();
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'photo-modal-img';
+    img.referrerPolicy = 'no-referrer';
+    img.onclick = (e) => e.stopPropagation();
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'photo-modal-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.onclick = (e) => { e.stopPropagation(); overlay.remove(); };
+
+    overlay.appendChild(img);
+    overlay.appendChild(closeBtn);
+
+    if (name) {
+      const label = document.createElement('div');
+      label.className = 'photo-modal-name';
+      label.textContent = name;
+      overlay.appendChild(label);
+    }
+
+    document.body.appendChild(overlay);
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
+  }
+
+  /* ---------- Photo Column Resize ---------- */
+  (function initPhotoColResize() {
+    const handle = document.getElementById('photoResizeHandle');
+    const th = document.getElementById('thPhoto');
+    if (!handle || !th) return;
+    let startX, startW;
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startX = e.pageX;
+      startW = th.offsetWidth;
+      handle.classList.add('active');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      const onMove = (ev) => {
+        const w = Math.max(36, startW + ev.pageX - startX);
+        th.style.width = w + 'px';
+      };
+      const onUp = () => {
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  })();
 
   // Iniciação
   initTheme();
