@@ -40,13 +40,17 @@ Antes de começar, você precisa ter instalado no seu computador:
 
 ## ⚡ Como Usar
 
-### Opção 1: Método Mais Fácil (Windows - 2 cliques)
+### Opção 1: Método Mais Fácil (1 clique / script pronto)
 
-Se você está no Windows, basta dar dois cliques no arquivo:
-```text
-iniciar.bat
-```
-Ele irá verificar o Node.js, instalar as dependências necessárias automaticamente na primeira vez, abrir o navegador e iniciar o aplicativo!
+- **No Windows:** Basta dar dois cliques no arquivo:
+  ```text
+  iniciar.bat
+  ```
+- **No Linux / macOS:** No terminal, execute:
+  ```bash
+  ./iniciar.sh
+  ```
+  *(Ele já possui permissão de execução configurada).*
 
 ---
 
