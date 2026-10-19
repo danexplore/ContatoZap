@@ -26,6 +26,7 @@ const state = {
   qr: null,
   groups: [],
   error: null,
+  syncProgress: null, // null | { phase: string, progress?: number, detail?: string }
 };
 
 let client = null;
@@ -254,6 +255,7 @@ async function startClient() {
         qr: null,
         error: 'Falha de autenticação: ' + m,
         message: 'Falha de autenticação',
+        syncProgress: null,
       });
     }
   });
@@ -267,6 +269,20 @@ async function startClient() {
         groups: [],
         error: 'Desconectado: ' + reason + '. Clique em "Reiniciar conexão".',
         message: 'Desconectado',
+        syncProgress: null,
+      });
+    }
+  });
+
+  c.on('loading_screen', (percent, message) => {
+    if (live()) {
+      log.info('SYNC', `Sincronizando: ${percent}% - ${message || ''}`);
+      setState({
+        syncProgress: {
+          phase: 'loading_screen',
+          progress: typeof percent === 'number' ? percent : null,
+          detail: message || '',
+        },
       });
     }
   });
@@ -274,6 +290,7 @@ async function startClient() {
   c.on('ready', () => {
     if (live()) {
       log.success('CLIENT', 'WhatsApp Web pronto e conectado!');
+      setState({ syncProgress: null });
       loadGroups();
     }
   });
@@ -293,6 +310,7 @@ async function startClient() {
         qr: null,
         error: msg(err),
         message: 'Não foi possível iniciar o WhatsApp',
+        syncProgress: null,
       });
     }
   }
