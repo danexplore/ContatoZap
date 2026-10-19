@@ -752,10 +752,12 @@ tr:hover .copy-icon-btn { opacity: 1; }
 }
 .member-avatar:hover { transform: scale(1.15); box-shadow: var(--shadow-md); }
 
-/* Avatar ocupa a largura da coluna Foto, que é redimensionável */
+/* O tamanho do avatar define a largura da coluna Foto (redimensionável).
+   Largura só no <th> é ignorada quando a tabela passa da tela. */
+table { --photo-avatar-size: 40px; }
 td.photo-cell { padding-inline: var(--space-2); text-align: center; }
 td.photo-cell .member-avatar,
-td.photo-cell .avatar-fallback { width: 100%; height: auto; aspect-ratio: 1; min-width: 28px; }
+td.photo-cell .avatar-fallback { width: var(--photo-avatar-size); height: var(--photo-avatar-size); }
 td.photo-cell .member-avatar { display: block; cursor: zoom-in; }
 
 .avatar-fallback {
@@ -1255,7 +1257,7 @@ th.photo-col { position: relative; text-align: center; }
             <thead>
               <tr>
                 <th style="width:44px;" scope="col">#</th>
-                <th id="thPhoto" class="photo-col" style="width:56px;" scope="col">Foto<span class="col-resize-handle" id="photoResizeHandle" aria-hidden="true"></span></th>
+                <th id="thPhoto" class="photo-col" scope="col">Foto<span class="col-resize-handle" id="photoResizeHandle" aria-hidden="true"></span></th>
                 <th class="sortable" data-sort="nome_whatsapp" scope="col">Nome WhatsApp <span class="sort-icon" aria-hidden="true"></span></th>
                 <th class="sortable" data-sort="nome_agenda" scope="col">Nome Agenda <span class="sort-icon" aria-hidden="true"></span></th>
                 <th class="sortable" data-sort="telefone" scope="col">Telefone <span class="sort-icon" aria-hidden="true"></span></th>
@@ -2068,6 +2070,9 @@ function openPhotoPreview(url, name) {
   const handle = $('photoResizeHandle');
   const th = $('thPhoto');
   if (!handle || !th) return;
+  const table = th.closest('table');
+  const cellPadding = 16; // padding-inline de td.photo-cell (2 × --space-2)
+  const MIN_AVATAR = 28;
   handle.addEventListener('click', (e) => e.stopPropagation());
   handle.addEventListener('mousedown', (e) => {
     e.preventDefault();
@@ -2077,7 +2082,10 @@ function openPhotoPreview(url, name) {
     handle.classList.add('active');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-    const onMove = (ev) => { th.style.width = `${Math.max(44, startWidth + ev.pageX - startX)}px`; };
+    const onMove = (ev) => {
+      const avatar = Math.max(MIN_AVATAR, startWidth + ev.pageX - startX - cellPadding);
+      table.style.setProperty('--photo-avatar-size', `${avatar}px`);
+    };
     const onUp = () => {
       handle.classList.remove('active');
       document.body.style.cursor = '';
