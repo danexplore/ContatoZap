@@ -81,7 +81,7 @@ function parseJsonBody(req, limit = 1048576) {
   });
 }
 
-async function runBatchExtraction(ids) {
+async function runBatchExtraction(ids, photos = false) {
   if (currentBatch) {
     throw new Error('Já existe uma extração em lote em andamento.');
   }
@@ -90,7 +90,7 @@ async function runBatchExtraction(ids) {
   const total = ids.length;
   const results = [];
 
-  log.info('BATCH', `Iniciando extração em lote de ${total} grupos...`);
+  log.info('BATCH', `Iniciando extração em lote de ${total} grupos...${photos ? ' [com fotos]' : ''}`);
   broadcastEvent('batch_start', { total });
 
   try {
@@ -112,7 +112,7 @@ async function runBatchExtraction(ids) {
       });
 
       try {
-        const data = await getParticipants(id, false);
+        const data = await getParticipants(id, false, photos);
         results.push(data);
         broadcastEvent('batch_item_done', {
           current: i + 1,
@@ -348,25 +348,37 @@ async function loadGroups() {
   }
 }
 
-async function getParticipants(id, forceRefresh = false) {
+async function getParticipants(id, forceRefresh = false, fetchPhotos = false) {
   const c = client;
   if (!c || state.status !== 'ready') {
     throw new Error('O WhatsApp ainda não está conectado.');
   }
 
-  if (!forceRefresh && participantsCache.has(id)) {
-    const entry = participantsCache.get(id);
-    if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
-      log.info('CACHE', `Retornando participantes do cache em memória para o grupo ${id}`);
-      return entry.data;
+  const cacheKey = `${id}:${fetchPhotos ? 'with_photos' : 'basic'}`;
+  if (!forceRefresh) {
+    if (participantsCache.has(cacheKey)) {
+      const entry = participantsCache.get(cacheKey);
+      if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
+        log.info('CACHE', `Retornando participantes do cache em memória para o grupo ${id}`);
+        return entry.data;
+      }
+    } else if (!fetchPhotos && participantsCache.has(`${id}:with_photos`)) {
+      const entry = participantsCache.get(`${id}:with_photos`);
+      if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
+        log.info('CACHE', `Retornando participantes (com fotos em cache) para o grupo ${id}`);
+        return entry.data;
+      }
     }
   }
 
   let lastErr = null;
   for (let i = 1; i <= 2; i++) {
     try {
-      const data = await getGroupParticipants(c, id);
-      participantsCache.set(id, { data, timestamp: Date.now() });
+      const data = await getGroupParticipants(c, id, { fetchProfilePics: fetchPhotos });
+      participantsCache.set(cacheKey, { data, timestamp: Date.now() });
+      if (fetchPhotos) {
+        participantsCache.set(`${id}:basic`, { data, timestamp: Date.now() });
+      }
       return data;
     } catch (err) {
       lastErr = err;
@@ -427,6 +439,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const body = await parseJsonBody(req);
         const ids = Array.isArray(body.ids) ? body.ids : [];
+        const photos = Boolean(body.photos);
         if (!ids.length) {
           sendJson(res, 400, { error: 'Nenhum grupo selecionado para extração.' });
           return logDone(400);
@@ -435,9 +448,9 @@ const server = http.createServer(async (req, res) => {
           sendJson(res, 409, { error: 'Uma extração em lote já está em andamento.' });
           return logDone(409);
         }
-        log.info('API', `Recebida solicitação de extração em lote para ${ids.length} grupo(s)`);
+        log.info('API', `Recebida solicitação de extração em lote para ${ids.length} grupo(s)${photos ? ' [com fotos]' : ''}`);
         // Inicia execução em background sem bloquear a resposta HTTP
-        runBatchExtraction(ids).catch((err) => log.error('BATCH', msg(err)));
+        runBatchExtraction(ids, photos).catch((err) => log.error('BATCH', msg(err)));
         sendJson(res, 202, { ok: true, message: 'Extração em lote iniciada.', total: ids.length });
         return logDone(202);
       } catch (err) {
@@ -482,13 +495,17 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/group') {
       const id = url.searchParams.get('id');
       const refresh = url.searchParams.get('refresh') === '1';
+      const photos = url.searchParams.get('photos') === '1' || url.searchParams.get('photos') === 'true';
       if (!id) {
         sendJson(res, 400, { error: 'ID do grupo não informado' });
         return logDone(400);
       }
 
       const reqStart = Date.now();
-      log.info('API', `Recebida requisição para extrair membros do grupo: ${id}${refresh ? ' (atualização forçada)' : ''}`);
+      log.info(
+        'API',
+        `Recebida requisição para extrair membros do grupo: ${id}${refresh ? ' (atualização forçada)' : ''}${photos ? ' [com fotos]' : ''}`
+      );
 
       const progressTimer = setInterval(() => {
         const sec = ((Date.now() - reqStart) / 1000).toFixed(1);
@@ -496,7 +513,7 @@ const server = http.createServer(async (req, res) => {
       }, 3000);
 
       try {
-        const data = await getParticipants(id, refresh);
+        const data = await getParticipants(id, refresh, photos);
         clearInterval(progressTimer);
         const totalSec = ((Date.now() - reqStart) / 1000).toFixed(2);
         data.totalDurationMs = Date.now() - reqStart;

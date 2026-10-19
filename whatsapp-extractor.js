@@ -179,18 +179,22 @@ async function listGroups(client) {
 }
 
 /**
- * Obtém os participantes de um grupo específico, lidando com contatos e IDs de privacidade (LID)
+ * Obtém os participantes de um grupo específico, lidando com contatos, IDs de privacidade (LID) e fotos de perfil
  */
-async function getGroupParticipants(client, groupId) {
+async function getGroupParticipants(client, groupId, options = {}) {
+  const fetchProfilePics = Boolean(options && (options.fetchProfilePics || options.photos));
   if (!client || !client.pupPage) {
     throw new Error('Cliente WhatsApp ainda não está pronto.');
   }
 
   const startTime = Date.now();
-  log.info('EXTRACT', `Iniciando extração do grupo ID: ${groupId}`);
+  log.info(
+    'EXTRACT',
+    `Iniciando extração do grupo ID: ${groupId}${fetchProfilePics ? ' (com consulta de fotos de perfil)' : ''}`
+  );
   await ensureInjectedPatches(client);
 
-  const result = await client.pupPage.evaluate(async (gid) => {
+  const result = await client.pupPage.evaluate(async (gid, fetchPics) => {
     const getModule = (name) => {
       try {
         return window.require ? window.require(name) : null;
@@ -289,9 +293,30 @@ async function getGroupParticipants(client, groupId) {
     }
 
     const contactCollection = collections ? collections.Contact : null;
+    const pptCollection = collections
+      ? collections.ProfilePicThumb || collections.WAWebProfilePicThumbCollection
+      : null;
+    const pptBridge = getModule('WAWebContactProfilePicThumbBridge');
     const contactGetters = getModule('WAWebContactGetters');
     const apiContact = getModule('WAWebApiContact');
     const lidMigration = getModule('WAWebLidMigrationUtils');
+
+    const getPhotoFromModel = (m) => {
+      if (!m) return '';
+      return m.eurl || m.img || m.imgFull || '';
+    };
+
+    const getCachedPhoto = (w) => {
+      if (!w) return '';
+      try {
+        if (pptCollection && pptCollection.get) {
+          const thumb = pptCollection.get(w);
+          const url = getPhotoFromModel(thumb);
+          if (url) return url;
+        }
+      } catch (_) {}
+      return '';
+    };
 
     const participants = [];
 
@@ -430,14 +455,97 @@ async function getGroupParticipants(client, groupId) {
       // Nome de exibição principal: prioriza o que a pessoa definiu no WhatsApp, depois o da agenda
       const displayName = pushname || savedName || '';
 
+      // Foto de perfil em cache local (0ms)
+      let photoUrl =
+        getCachedPhoto(wid) ||
+        (serializedId ? getCachedPhoto(serializedId) : '') ||
+        (contact && contact.profilePicThumb ? getPhotoFromModel(contact.profilePicThumb) : '') ||
+        (phoneContact && phoneContact.profilePicThumb ? getPhotoFromModel(phoneContact.profilePicThumb) : '');
+
+      if (!photoUrl && cleanPhone && widFactory) {
+        try {
+          const cWid = widFactory.createWid(`${cleanPhone}@c.us`);
+          photoUrl = getCachedPhoto(cWid) || getCachedPhoto(`${cleanPhone}@c.us`);
+        } catch (_) {}
+      }
+
       participants.push({
+        id: serializedId,
         name: displayName,
         pushname: pushname,
         savedName: savedName,
         phone: cleanPhone,
         admin: isAdmin,
         hidden: hidden,
+        photoUrl: photoUrl || '',
       });
+    }
+
+    // Se o usuário solicitou fotos de perfil e algumas não estavam em cache:
+    if (fetchPics) {
+      const missing = participants.filter((p) => !p.photoUrl);
+      const concurrency = 6;
+      for (let i = 0; i < missing.length; i += concurrency) {
+        const chunk = missing.slice(i, i + concurrency);
+        await Promise.all(
+          chunk.map(async (p) => {
+            const targets = [];
+            if (p.id) targets.push(p.id);
+            if (p.phone && !p.id.includes(p.phone)) targets.push(`${p.phone}@c.us`);
+
+            for (const target of targets) {
+              try {
+                let targetWid = target;
+                if (widFactory && typeof target === 'string') {
+                  try {
+                    targetWid = widFactory.createWid(target);
+                  } catch (_) {}
+                }
+
+                // 1. Tenta ProfilePicThumb.find
+                if (pptCollection && pptCollection.find) {
+                  const res = await Promise.race([
+                    pptCollection.find(targetWid),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+                  ]).catch(() => null);
+
+                  const url = getPhotoFromModel(res);
+                  if (url) {
+                    p.photoUrl = url;
+                    break;
+                  }
+                }
+
+                // 2. Fallback WAWebContactProfilePicThumbBridge se disponível
+                if (!p.photoUrl && pptBridge && pptBridge.requestProfilePicFromServer) {
+                  try {
+                    const chatObj =
+                      chatCollection && chatCollection.get
+                        ? chatCollection.get(targetWid) || chatCollection.get(target)
+                        : null;
+                    if (chatObj) {
+                      const res = await Promise.race([
+                        pptBridge.requestProfilePicFromServer(chatObj),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+                      ]).catch(() => null);
+
+                      const url = getPhotoFromModel(res);
+                      if (url) {
+                        p.photoUrl = url;
+                        break;
+                      }
+                    }
+                  } catch (_) {}
+                }
+              } catch (_) {}
+            }
+          })
+        );
+
+        if (i + concurrency < missing.length) {
+          await new Promise((r) => setTimeout(r, 35));
+        }
+      }
     }
 
     return {
@@ -445,7 +553,7 @@ async function getGroupParticipants(client, groupId) {
       name: String(groupName).trim(),
       participants,
     };
-  }, groupId);
+  }, groupId, fetchProfilePics);
 
   const durationMs = Date.now() - startTime;
   const durationSec = (durationMs / 1000).toFixed(2);
@@ -454,9 +562,10 @@ async function getGroupParticipants(client, groupId) {
 
   const hiddenCount = result.participants.filter((p) => p.hidden).length;
   const normalCount = result.participants.length - hiddenCount;
+  const photoCount = result.participants.filter((p) => Boolean(p.photoUrl)).length;
   log.success(
     'EXTRACT',
-    `Grupo "${result.name}": ${result.participants.length} participantes extraídos em ${durationSec}s (${normalCount} normais, ${hiddenCount} com LID/privacidade)`
+    `Grupo "${result.name}": ${result.participants.length} participantes extraídos em ${durationSec}s (${normalCount} normais, ${hiddenCount} com LID/privacidade, ${photoCount} com foto acessível)`
   );
 
   return result;
@@ -467,7 +576,7 @@ async function getGroupParticipants(client, groupId) {
  */
 function generateCsv(participants) {
   const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  const header = ['nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status_numero'].map(esc).join(';');
+  const header = ['nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status_numero', 'foto_perfil'].map(esc).join(';');
   const lines = [header];
 
   for (const p of participants) {
@@ -476,7 +585,8 @@ function generateCsv(participants) {
     const status = p.hidden ? 'ID de privacidade (LID)' : 'Normal';
     const nomeWhats = p.pushname || p.name || '';
     const nomeAgenda = p.savedName || '';
-    lines.push([esc(nomeWhats), esc(nomeAgenda), esc(telefone), esc(admin), esc(status)].join(';'));
+    const foto = p.photoUrl || '';
+    lines.push([esc(nomeWhats), esc(nomeAgenda), esc(telefone), esc(admin), esc(status), esc(foto)].join(';'));
   }
 
   return '\uFEFF' + lines.join('\r\n');

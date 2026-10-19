@@ -124,6 +124,12 @@ client.on('ready', async () => {
     process.exit(1);
   }
 
+  const respostaFotos = await perguntar('\nDeseja buscar fotos de perfil se acessíveis? (s/N): ');
+  const buscarFotos = ['s', 'sim', 'y', 'yes'].includes(respostaFotos.toLowerCase().trim());
+  if (buscarFotos) {
+    log.info('CLI', 'Modo com fotos ativado: o extrator consultará as fotos de perfil acessíveis via CDN do WhatsApp.');
+  }
+
   log.info('EXTRACT', `Iniciando extração de ${escolhidos.length} grupo(s)...`);
   for (let i = 0; i < escolhidos.length; i++) {
     const g = escolhidos[i];
@@ -136,7 +142,7 @@ client.on('ready', async () => {
     }, 3000);
 
     try {
-      const dados = await getGroupParticipants(client, g.id);
+      const dados = await getGroupParticipants(client, g.id, { fetchProfilePics: buscarFotos });
       clearInterval(progressTimer);
       const { filename } = saveGroupCsv(dados.name, dados.participants);
       const totalSec = ((Date.now() - itemStart) / 1000).toFixed(2);

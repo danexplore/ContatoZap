@@ -533,6 +533,61 @@
   [data-theme="dark"] .tag-badge.admin { background: #064e3b; color: #6ee7b7; }
   [data-theme="dark"] .tag-badge.lid { background: #451a03; color: #fcd34d; }
 
+  /* Avatar & Photo Styles */
+  .member-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+    background: var(--surface-alt);
+  }
+  .member-avatar:hover {
+    transform: scale(1.22);
+    box-shadow: var(--shadow-md);
+  }
+  .avatar-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface-alt);
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    user-select: none;
+    margin: 0 auto;
+  }
+  .photo-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-alt);
+    transition: var(--transition);
+  }
+  .photo-checkbox-label:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+  .photo-checkbox-label input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
   /* Table Pagination Footer */
   .table-footer {
     display: flex;
@@ -719,7 +774,12 @@
       <ul id="groupList" class="group-list"></ul>
 
       <div id="batchSidebarBar" class="batch-sidebar-bar" hidden>
-        <span style="font-weight:600; font-size:12px;" id="batchSidebarText">0 grupos</span>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <span style="font-weight:600; font-size:12px;" id="batchSidebarText">0 grupos</span>
+          <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;" title="Consultar fotos de perfil acessíveis para os grupos selecionados">
+            <input type="checkbox" id="batchPhotosCheck"> 📸 Fotos
+          </label>
+        </div>
         <button class="btn primary sm" id="startBatchBtn">Extrair Selecionados</button>
       </div>
     </aside>
@@ -750,6 +810,10 @@
             </div>
           </div>
           <div class="detail-actions">
+            <label class="photo-checkbox-label" title="Consultar fotos de perfil nos servidores do WhatsApp (se acessíveis)">
+              <input type="checkbox" id="fetchPhotosCheckbox">
+              <span>📸 Fotos</span>
+            </label>
             <button class="btn sm" id="refreshActiveGroupBtn" title="Buscar participantes mais recentes do WhatsApp">Atualizar</button>
             <button class="btn sm" id="copyPhonesBtn">Copiar Telefones</button>
             <button class="btn sm" id="exportCsvBtn">Baixar CSV</button>
@@ -797,7 +861,8 @@
           <table>
             <thead>
               <tr>
-                <th style="width:48px;">#</th>
+                <th style="width:44px;">#</th>
+                <th style="width:56px; text-align:center;">Foto</th>
                 <th class="sortable" data-sort="name">Nome <span class="sort-icon" id="sortIconName">▲</span></th>
                 <th class="sortable" data-sort="phone">Telefone <span class="sort-icon" id="sortIconPhone"></span></th>
                 <th class="sortable" data-sort="admin" style="width:120px;">Tipo <span class="sort-icon" id="sortIconAdmin"></span></th>
@@ -1160,32 +1225,52 @@
   }
 
   /* ---------- Single Group Detail ---------- */
-  async function openGroup(g, forceRefresh = false) {
+  async function openGroup(g, forceRefresh = false, withPhotos = null) {
     activeGroup = { id: g.id, name: g.name };
     renderGroupList();
 
     $('emptyDetail').hidden = true;
     $('activeGroupView').hidden = true;
     $('loadingDetail').hidden = false;
-    $('loadingDetailMsg').textContent = `Carregando membros de "${g.name}"...`;
+
+    const fetchPhotos =
+      withPhotos !== null
+        ? withPhotos
+        : Boolean($('fetchPhotosCheckbox') && $('fetchPhotosCheckbox').checked);
+
+    $('loadingDetailMsg').textContent = fetchPhotos
+      ? `Carregando membros e fotos de "${g.name}"...`
+      : `Carregando membros de "${g.name}"...`;
+
+    const cacheKey = `${g.id}:${fetchPhotos ? 'with_photos' : 'basic'}`;
 
     // Verifica cache local client
-    if (!forceRefresh && clientCache.has(g.id)) {
-      activeGroup = clientCache.get(g.id);
-      renderActiveGroup();
-      return;
+    if (!forceRefresh) {
+      if (clientCache.has(cacheKey)) {
+        activeGroup = clientCache.get(cacheKey);
+        renderActiveGroup();
+        return;
+      }
+      if (!fetchPhotos && clientCache.has(`${g.id}:with_photos`)) {
+        activeGroup = clientCache.get(`${g.id}:with_photos`);
+        renderActiveGroup();
+        return;
+      }
     }
 
     try {
-      const url = `/api/group?id=${encodeURIComponent(g.id)}${forceRefresh ? '&refresh=1' : ''}`;
+      const url = `/api/group?id=${encodeURIComponent(g.id)}${forceRefresh ? '&refresh=1' : ''}${fetchPhotos ? '&photos=1' : ''}`;
       const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao carregar grupo.');
 
-      clientCache.set(g.id, data);
+      clientCache.set(cacheKey, data);
+      if (fetchPhotos) {
+        clientCache.set(`${g.id}:basic`, data);
+      }
       updateGroupMemberCountInUI(g.id, data.participants.length);
 
-      if (activeGroup.id === g.id) {
+      if (activeGroup && activeGroup.id === g.id) {
         activeGroup = data;
         renderActiveGroup();
       }
@@ -1203,7 +1288,10 @@
 
     $('activeGroupName').textContent = activeGroup.name;
     const list = activeGroup.participants || [];
-    $('activeGroupCount').textContent = `${list.length} participante(s)`;
+    const photosCount = list.filter((p) => Boolean(p.photoUrl)).length;
+    $('activeGroupCount').textContent = photosCount > 0
+      ? `${list.length} participante(s) • ${photosCount} com foto`
+      : `${list.length} participante(s)`;
     $('activeGroupDuration').textContent = activeGroup.durationSec
       ? `⚡ ${activeGroup.durationSec}s`
       : '⚡ Cache em memória';
@@ -1225,6 +1313,15 @@
 
     currentPage = 1;
     renderTable();
+  }
+
+  function createFallbackAvatar(name) {
+    const el = document.createElement('span');
+    el.className = 'avatar-fallback';
+    const clean = String(name || '').trim();
+    el.textContent = clean ? clean.charAt(0).toUpperCase() : '👤';
+    el.title = 'Foto não acessível ou privada';
+    return el;
   }
 
   /* ---------- Table Rendering & Filtering ---------- */
@@ -1290,7 +1387,7 @@
     if (!pageItems.length) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 4;
+      td.colSpan = 5;
       td.style.textAlign = 'center';
       td.style.padding = '24px';
       td.style.color = 'var(--text-muted)';
@@ -1308,6 +1405,34 @@
       const tdIdx = document.createElement('td');
       tdIdx.style.color = 'var(--text-muted)';
       tdIdx.textContent = globalIdx;
+
+      // Foto Avatar
+      const tdPhoto = document.createElement('td');
+      tdPhoto.style.textAlign = 'center';
+      tdPhoto.style.width = '56px';
+
+      if (p.photoUrl) {
+        const link = document.createElement('a');
+        link.href = p.photoUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.title = 'Clique para abrir foto em tamanho real';
+        link.style.display = 'inline-block';
+
+        const img = document.createElement('img');
+        img.src = p.photoUrl;
+        img.className = 'member-avatar';
+        img.alt = p.pushname || p.name || 'Foto';
+        img.loading = 'lazy';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => {
+          link.replaceWith(createFallbackAvatar(p.pushname || p.name));
+        };
+        link.appendChild(img);
+        tdPhoto.appendChild(link);
+      } else {
+        tdPhoto.appendChild(createFallbackAvatar(p.pushname || p.name));
+      }
 
       // Nome (Perfil WhatsApp e Agenda)
       const tdName = document.createElement('td');
@@ -1381,6 +1506,7 @@
       }
 
       tr.appendChild(tdIdx);
+      tr.appendChild(tdPhoto);
       tr.appendChild(tdName);
       tr.appendChild(tdPhone);
       tr.appendChild(tdStatus);
@@ -1444,10 +1570,11 @@
   $('startBatchBtn').onclick = () => {
     if (selectedGroupIds.size === 0) return;
     const ids = Array.from(selectedGroupIds);
+    const photos = Boolean($('batchPhotosCheck') && $('batchPhotosCheck').checked);
     fetch('/api/batch-extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({ ids, photos }),
     }).catch((err) => showToast(`Erro ao iniciar lote: ${err.message}`, 'error'));
   };
 
@@ -1576,13 +1703,14 @@
   $('exportCsvBtn').onclick = () => {
     if (!activeGroup || !activeGroup.participants) return;
     const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-    const rows = [['nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status']].concat(
+    const rows = [['nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status', 'foto_perfil']].concat(
       activeGroup.participants.map((p) => [
         p.pushname || p.name || '',
         p.savedName || '',
         p.phone ? '+' + cleanDigits(p.phone) : '',
         p.admin ? 'sim' : 'não',
         p.hidden ? 'ID de privacidade (LID)' : 'Normal',
+        p.photoUrl || '',
       ])
     );
     const csv = '\uFEFF' + rows.map((r) => r.map(esc).join(';')).join('\r\n');
@@ -1626,7 +1754,7 @@
     const seenPhones = new Set();
     const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
 
-    const rows = [['grupo_origem', 'nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status']];
+    const rows = [['grupo_origem', 'nome_whatsapp', 'nome_agenda', 'telefone', 'admin', 'status', 'foto_perfil']];
 
     batchResults.forEach((g) => {
       (g.participants || []).forEach((p) => {
@@ -1642,6 +1770,7 @@
           phone ? '+' + phone : '',
           p.admin ? 'sim' : 'não',
           p.hidden ? 'ID de privacidade (LID)' : 'Normal',
+          p.photoUrl || '',
         ]);
       });
     });
@@ -1671,9 +1800,12 @@
         flatGroups[0].participants.push({
           groupName: g.name,
           name: p.name,
+          pushname: p.pushname,
+          savedName: p.savedName,
           phone: p.phone,
           admin: p.admin,
           hidden: p.hidden,
+          photoUrl: p.photoUrl || '',
         });
       });
     });
@@ -1691,17 +1823,29 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 
+    let columnsXml = '';
+    if (includeGroupColumn) columnsXml += '    <Column ss:Width="150"/>\n';
+    columnsXml += '    <Column ss:Width="65"/>\n';  // Preview Foto
+    columnsXml += '    <Column ss:Width="150"/>\n'; // Nome Perfil
+    columnsXml += '    <Column ss:Width="130"/>\n'; // Nome Agenda
+    columnsXml += '    <Column ss:Width="120"/>\n'; // Telefone
+    columnsXml += '    <Column ss:Width="60"/>\n';  // Admin
+    columnsXml += '    <Column ss:Width="120"/>\n'; // Status
+    columnsXml += '    <Column ss:Width="95"/>\n';  // Link da Foto
+
     let rowsXml = '';
 
     // Cabeçalho
-    rowsXml += '<Row ss:StyleID="Header">';
-    if (includeGroupColumn) rowsXml += '<Cell><Data ss:Type="String">Grupo</Data></Cell>';
-    rowsXml += '<Cell><Data ss:Type="String">Nome WhatsApp (Perfil)</Data></Cell>';
-    rowsXml += '<Cell><Data ss:Type="String">Nome na Agenda</Data></Cell>';
-    rowsXml += '<Cell><Data ss:Type="String">Telefone</Data></Cell>';
-    rowsXml += '<Cell><Data ss:Type="String">Admin</Data></Cell>';
-    rowsXml += '<Cell><Data ss:Type="String">Status</Data></Cell>';
-    rowsXml += '</Row>\n';
+    rowsXml += '    <Row ss:StyleID="Header" ss:Height="24">\n';
+    if (includeGroupColumn) rowsXml += '      <Cell><Data ss:Type="String">Grupo</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Preview Foto</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Nome WhatsApp (Perfil)</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Nome na Agenda</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Telefone</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Admin</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Status</Data></Cell>\n';
+    rowsXml += '      <Cell><Data ss:Type="String">Link da Foto</Data></Cell>\n';
+    rowsXml += '    </Row>\n';
 
     groupsList.forEach((grp) => {
       (grp.participants || []).forEach((p) => {
@@ -1710,15 +1854,32 @@
         const status = p.hidden ? 'ID de privacidade (LID)' : 'Normal';
         const whatsName = p.pushname || p.name || '';
         const savedName = p.savedName || '';
+        const photoUrl = p.photoUrl || '';
+        const hasPhoto = Boolean(photoUrl);
 
-        rowsXml += '<Row>';
-        if (includeGroupColumn) rowsXml += `<Cell><Data ss:Type="String">${esc(p.groupName || grp.groupName)}</Data></Cell>`;
-        rowsXml += `<Cell><Data ss:Type="String">${esc(whatsName)}</Data></Cell>`;
-        rowsXml += `<Cell><Data ss:Type="String">${esc(savedName)}</Data></Cell>`;
-        rowsXml += `<Cell><Data ss:Type="String">${esc(phone)}</Data></Cell>`;
-        rowsXml += `<Cell><Data ss:Type="String">${esc(admin)}</Data></Cell>`;
-        rowsXml += `<Cell><Data ss:Type="String">${esc(status)}</Data></Cell>`;
-        rowsXml += '</Row>\n';
+        rowsXml += `    <Row ss:Height="${hasPhoto ? '46' : '22'}">\n`;
+        if (includeGroupColumn) rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(p.groupName || grp.groupName)}</Data></Cell>\n`;
+
+        if (hasPhoto) {
+          // Fórmula =IMAGE("url") nativa para Excel 365, Excel Web e Google Sheets, com ss:HRef para clique
+          rowsXml += `      <Cell ss:StyleID="PreviewCell" ss:Formula="=IMAGE(&quot;${esc(photoUrl)}&quot;)" ss:HRef="${esc(photoUrl)}"><Data ss:Type="String">${esc(photoUrl)}</Data></Cell>\n`;
+        } else {
+          rowsXml += `      <Cell ss:StyleID="PreviewCell"><Data ss:Type="String">-</Data></Cell>\n`;
+        }
+
+        rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(whatsName)}</Data></Cell>\n`;
+        rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(savedName)}</Data></Cell>\n`;
+        rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(phone)}</Data></Cell>\n`;
+        rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(admin)}</Data></Cell>\n`;
+        rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">${esc(status)}</Data></Cell>\n`;
+
+        if (hasPhoto) {
+          rowsXml += `      <Cell ss:StyleID="LinkCell" ss:HRef="${esc(photoUrl)}"><Data ss:Type="String">Ver Foto</Data></Cell>\n`;
+        } else {
+          rowsXml += `      <Cell ss:StyleID="RegularCell"><Data ss:Type="String">-</Data></Cell>\n`;
+        }
+
+        rowsXml += '    </Row>\n';
       });
     });
 
@@ -1732,12 +1893,22 @@
   <Style ss:ID="Header">
    <Font ss:Bold="1" ss:Color="#FFFFFF"/>
    <Interior ss:Color="#00A884" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="PreviewCell">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="LinkCell">
+   <Font ss:Color="#0066CC" ss:Underline="Single"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="RegularCell">
+   <Alignment ss:Vertical="Center"/>
   </Style>
  </Styles>
  <Worksheet ss:Name="Contatos">
   <Table>
-   ${rowsXml}
-  </Table>
+${columnsXml}${rowsXml}  </Table>
  </Worksheet>
 </Workbook>`;
   }
@@ -1747,6 +1918,21 @@
   $('refreshGroupsBtn').onclick = () => fetch('/api/retry-groups', { method: 'POST' });
   $('restartBtn').onclick = () => fetch('/api/restart', { method: 'POST' });
   $('restartHeroBtn').onclick = () => fetch('/api/restart', { method: 'POST' });
+
+  // Salva e restaura preferência de consulta de fotos
+  const photoCheckbox = $('fetchPhotosCheckbox');
+  if (photoCheckbox) {
+    const savedPref = localStorage.getItem('whatsapp_extractor_fetch_photos');
+    if (savedPref !== null) {
+      photoCheckbox.checked = savedPref === '1';
+    }
+    photoCheckbox.onchange = (e) => {
+      localStorage.setItem('whatsapp_extractor_fetch_photos', e.target.checked ? '1' : '0');
+      if (activeGroup && activeGroup.id) {
+        openGroup(activeGroup, true);
+      }
+    };
+  }
 
   // Iniciação
   initTheme();

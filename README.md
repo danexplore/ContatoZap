@@ -14,6 +14,10 @@ Uma ferramenta completa, visual, rápida e fácil de usar para extrair contatos 
 - **📱 Dupla Identificação de Nomes:**
   - **Nome de Perfil (Pushname):** O nome público que a própria pessoa definiu no WhatsApp dela.
   - **Nome Salvo:** O nome com o qual você salvou a pessoa na sua agenda de contatos (se houver).
+- **📸 Fotos de Perfil & Preview no Excel:**
+  - Extração do link direto da foto de perfil (quando acessível pelas opções de privacidade do usuário).
+  - Tabela com avatar visual na interface web e clique para ver a foto original.
+  - Exportação para Excel com coluna **Preview Foto** (fórmula nativa `=IMAGE()`) e **Link da Foto** clicável.
 - **🔒 Resolução Inteligente de LIDs e Números Ocultos:** Resolve membros de grupos com configurações modernas de privacidade de número do WhatsApp.
 - **🖥️ Interface Web Moderna (GUI):**
   - Leitura do QR Code diretamente no navegador.
@@ -102,11 +106,13 @@ Ao exportar os contatos, você terá as seguintes informações organizadas:
 
 | Campo | Descrição | Exemplo |
 | :--- | :--- | :--- |
+| **Preview Foto** | Miniatura da foto no Excel via fórmula nativa `=IMAGE()` | *(Imagem renderizada na célula)* |
+| **Link da Foto** | Link direto na CDN da Meta (`pps.whatsapp.net`) | `https://pps.whatsapp.net/v/...` |
 | **Telefone** | Número completo com DDI e DDD formatado | `+55 11 98765-4321` |
 | **Nome do Perfil** | Nome público configurado pelo usuário no WhatsApp | `Mariana Silva` |
 | **Nome Salvo** | Nome que você deu ao contato na sua agenda | `Mariana Cliente VIP` |
 | **Administrador** | Indica se a pessoa é administradora do grupo | `Sim` ou `Não` |
-| **ID WhatsApp** | Identificador único do contato | `5511987654321@c.us` |
+| **Status** | Indicador de número normal ou ID de privacidade (LID) | `Normal` ou `Privacidade (LID)` |
 
 ---
 
@@ -123,6 +129,9 @@ O WhatsApp só disponibiliza o nome de perfil se o participante tiver configurad
 
 ### 4. Meus contatos ou dados são compartilhados?
 **De forma alguma.** Todo o processamento ocorre 100% no seu computador (localhost). Não existe telemetria, banco de dados remoto ou envio para servidores terceiros.
+
+### 5. Por que algumas fotos de perfil não aparecem?
+O WhatsApp respeita estritamente as preferências de privacidade de cada usuário. Se a pessoa configurou a foto de perfil como visível apenas para *"Meus contatos"* (e ela não possui o seu número salvo) ou *"Ninguém"*, ou caso ela não utilize foto de perfil, a imagem não estará acessível pelos servidores da Meta. Nesses casos, o extrator preenche o campo com `-`.
 
 ---
 
