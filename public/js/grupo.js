@@ -4,6 +4,7 @@ import { buscarGrupo } from './api.js';
 import { renderizarSidebar, atualizarTamanhoGrupo } from './sidebar.js';
 import { renderizarLista } from './lista.js';
 import { copiarTelefones, exportarCsv, exportarExcel, exportarJson } from './exportar.js';
+import { contarFiltros } from './logica/filtros.js';
 
 // null | { id, name } enquanto carrega | GrupoExtraido
 let grupoAtivo = null;
@@ -51,17 +52,15 @@ export function renderizarGrupoAtivo() {
   const comFoto = lista.filter((p) => Boolean(p.photoUrl)).length;
   $('activeGroupCount').textContent = comFoto > 0 ? `${lista.length} participante(s) · ${comFoto} com foto` : `${lista.length} participante(s)`;
   $('activeGroupDuration').textContent = grupoAtivo.durationSec ? `${grupoAtivo.durationSec}s` : 'Cache';
-  const comTelefone = lista.filter((p) => p.phone && !p.hidden).length;
-  const admins = lista.filter((p) => p.admin).length;
-  const ocultos = lista.filter((p) => p.hidden).length;
-  $('metricTotal').textContent = lista.length;
-  $('metricPhones').textContent = comTelefone;
-  $('metricAdmins').textContent = admins;
-  $('metricHidden').textContent = ocultos;
-  $('tabCountAll').textContent = lista.length;
-  $('tabCountPhones').textContent = comTelefone;
-  $('tabCountAdmins').textContent = admins;
-  $('tabCountHidden').textContent = ocultos;
+  const contagem = contarFiltros(lista);
+  $('metricTotal').textContent = contagem.todos;
+  $('metricPhones').textContent = contagem.telefone;
+  $('metricAdmins').textContent = contagem.admins;
+  $('metricHidden').textContent = contagem.privados;
+  $('tabCountAll').textContent = contagem.todos;
+  $('tabCountPhones').textContent = contagem.telefone;
+  $('tabCountAdmins').textContent = contagem.admins;
+  $('tabCountHidden').textContent = contagem.privados;
   renderizarLista({ primeiraPagina: true });
 }
 

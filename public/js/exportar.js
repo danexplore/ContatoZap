@@ -2,22 +2,11 @@
 import { $, baixarArquivo, copiarTexto, mostrarAviso } from './ui.js';
 import { estaSincronizando, BOTOES_EXPORTACAO } from './conexao.js';
 import { apenasDigitos } from './logica/texto.js';
+import { linhaExportacao } from './logica/filtros.js';
 
 const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const PX_PARA_PONTOS = 0.75;
 const PX_POR_CARACTERE_EXCEL = 7;
-
-export function paraLinhaExcel(p) {
-  const telefone = apenasDigitos(p.phone);
-  return {
-    preview: '',
-    nome_whatsapp: p.pushname || p.name || '',
-    nome_agenda: p.savedName || '',
-    telefone: telefone ? '+' + telefone : '',
-    admin: p.admin ? 'sim' : 'não',
-    status: p.hidden ? 'ID de privacidade (LID)' : 'Normal',
-  };
-}
 
 const escaparCsv = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
 
@@ -87,7 +76,7 @@ export async function montarPlanilha(nomeAba, linhas, comColunaGrupo) {
     { header: 'Status', key: 'status', width: 20 },
   ];
   for (const { participante, nomeGrupo } of linhas) {
-    const valores = paraLinhaExcel(participante);
+    const valores = linhaExportacao(participante);
     if (comColunaGrupo) valores.grupo_origem = nomeGrupo || '';
     const linha = aba.addRow(valores);
     linha.height = Math.round(tamanho * PX_PARA_PONTOS) + 4;

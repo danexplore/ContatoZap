@@ -1,13 +1,13 @@
 // Tabela de participantes do grupo aberto: filtro por abas, busca, ordenação, paginação e coluna Foto.
 import { $, ICONES, copiarTexto, abrirPreviewFoto } from './ui.js';
 import { obterGrupoAtivo } from './grupo.js';
-import { paraLinhaExcel } from './exportar.js';
 import { apenasDigitos, formatarTelefone } from './logica/texto.js';
+import { filtrarParticipantes, linhaExportacao, ordenarParticipantes } from './logica/filtros.js';
 
 // Mesmas colunas do Excel, mais # e Foto
 const COLUNAS_TABELA = 7;
 
-let filtroAtivo = 'all';
+let filtroAtivo = 'todos';
 let termoBusca = '';
 // null = ordem original do grupo, a mesma do Excel
 let colunaOrdem = null;
@@ -41,20 +41,8 @@ function criarSelo(texto, variante) {
 function membrosFiltradosEOrdenados() {
   const grupo = obterGrupoAtivo();
   if (!grupo || !grupo.participants) return [];
-  let lista = [...grupo.participants];
-  if (filtroAtivo === 'phones') lista = lista.filter((p) => p.phone && !p.hidden);
-  else if (filtroAtivo === 'admins') lista = lista.filter((p) => p.admin);
-  else if (filtroAtivo === 'hidden') lista = lista.filter((p) => p.hidden);
-  const q = termoBusca.toLowerCase();
-  if (q) lista = lista.filter((p) => [p.pushname, p.name, p.savedName].some((n) => (n || '').toLowerCase().includes(q)) || (p.phone || '').includes(q));
-  if (!colunaOrdem) return lista;
-  // Ordena pelos mesmos valores que vão para as colunas do Excel
-  const comChave = lista.map((p) => ({ p, chave: paraLinhaExcel(p)[colunaOrdem] }));
-  comChave.sort((a, b) => {
-    const cmp = a.chave.localeCompare(b.chave, 'pt-BR', { numeric: true });
-    return ordemCrescente ? cmp : -cmp;
-  });
-  return comChave.map(({ p }) => p);
+  const filtrados = filtrarParticipantes(grupo.participants, { filtro: filtroAtivo, busca: termoBusca });
+  return ordenarParticipantes(filtrados, colunaOrdem, ordemCrescente);
 }
 
 function criarCelulaFoto(p) {
@@ -132,7 +120,7 @@ export function renderizarLista({ primeiraPagina = false } = {}) {
     const tdIndice = document.createElement('td');
     tdIndice.style.color = 'hsl(var(--color-text-tertiary))';
     tdIndice.textContent = inicio + idx + 1;
-    const excel = paraLinhaExcel(p);
+    const excel = linhaExportacao(p);
     const tdNomeWhatsapp = criarCelulaTexto(excel.nome_whatsapp);
     tdNomeWhatsapp.style.fontWeight = '500';
     const tdNomeAgenda = criarCelulaTexto(excel.nome_agenda);

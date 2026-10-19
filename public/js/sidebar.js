@@ -3,16 +3,17 @@ import { $, mostrarAviso } from './ui.js';
 import { iniciarLote, recarregarGrupos } from './api.js';
 import { obterEstadoServidor } from './conexao.js';
 import { abrirGrupo, obterGrupoAtivo } from './grupo.js';
+import { filtrarGrupos } from './logica/filtros.js';
 
 const gruposSelecionados = new Set();
 
 export function renderizarSidebar() {
   const lista = $('groupList');
-  const termo = $('groupSearch').value.trim().toLowerCase();
+  const termo = $('groupSearch').value;
   const grupos = obterEstadoServidor().groups || [];
   const grupoAtivo = obterGrupoAtivo();
   $('totalGroupsCount').textContent = grupos.length;
-  const filtrados = grupos.filter((g) => (g.name || '').toLowerCase().includes(termo));
+  const filtrados = filtrarGrupos(grupos, termo);
   lista.replaceChildren();
   if (!filtrados.length) {
     const vazio = document.createElement('li');
