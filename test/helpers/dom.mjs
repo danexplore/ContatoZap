@@ -11,7 +11,7 @@ export function montarDom(html) {
       const negativos = [...parte.matchAll(/:not\(([^)]+)\)/g)];
       parte = parte.replace(/:not\([^)]+\)/g, '');
       if (negativos.some((m) => combina(el, m[1]))) return false;
-      const tag = parte.match(/^[a-z]+/i)?.[0];
+      const tag = parte.match(/^[a-z][\w-]*/i)?.[0];
       if (tag && el.tagName !== tag.toUpperCase()) return false;
       for (const m of parte.matchAll(/#([\w-]+)|\.([\w-]+)|\[([\w-]+)(?:="([^"\]]*)")?\]/g)) {
         if (m[1] && el.id !== m[1]) return false;
