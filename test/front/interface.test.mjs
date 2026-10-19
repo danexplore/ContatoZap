@@ -168,3 +168,35 @@ test('busca com debounce atualiza resultados e não vaza para outra aba', async 
   assert.equal(obterEstado().visoes.get('g1').busca, 'Caio');
   assert.deepEqual(erros, []);
 });
+
+
+test('imprimir grade respeita filtro e busca pendente e restaura título ao cancelar', async () => {
+  const botao = $('imprimirGradeBtn');
+  assert.ok(botao, 'controle para imprimir a grade deve existir');
+  atualizarEstado({ abaAtiva: 'g1', modo: 'grade' });
+  atualizarVisao('g1', { filtro: 'admins', busca: '', ordenacao: { coluna: 'nome_whatsapp', asc: false } });
+  $('memberSearch').value = 'Caio'; // ainda antes do debounce
+  document.title = 'ContatoZap';
+  let impressoes = 0;
+  let finalizar;
+  globalThis.window = {
+    addEventListener(tipo, fn) { assert.equal(tipo, 'afterprint'); finalizar = fn; },
+    removeEventListener() {},
+    print() { impressoes++; },
+  };
+  botao.disparar('click');
+  await esperar();
+  const pagina = document.getElementById('impressaoGrade');
+  assert.ok(pagina);
+  assert.equal(impressoes, 1);
+  assert.equal(pagina.querySelector('h1').textContent, 'Grupo');
+  assert.equal(pagina.querySelectorAll('.card-participante').length, 1);
+  assert.equal(pagina.querySelector('.card-nome').textContent, 'Caio');
+  assert.equal(pagina.querySelector('.grade-participantes').dataset.tamanho, 'G');
+  assert.equal(document.title, 'Grupo — Participantes');
+  finalizar(); // mesma finalização ao imprimir ou cancelar
+  assert.equal(document.getElementById('impressaoGrade'), null);
+  assert.equal(document.title, 'ContatoZap');
+  delete globalThis.window;
+  assert.deepEqual(erros, []);
+});

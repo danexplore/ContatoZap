@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="/css/lista.css">
 <link rel="stylesheet" href="/css/grade.css">
 <link rel="stylesheet" href="/css/ficha.css">
+<link rel="stylesheet" href="/css/imprimir.css">
 <script src="/exceljs.min.js"></script>
 <script type="module" src="/js/app.js"></script>
 </head>
@@ -218,6 +219,7 @@
               <button type="button" class="btn sm" data-tamanho-grade="M" aria-label="Cartões médios" aria-pressed="true">M</button>
               <button type="button" class="btn sm" data-tamanho-grade="G" aria-label="Cartões grandes" aria-pressed="false">G</button>
             </div>
+            <button type="button" class="btn sm" id="imprimirGradeBtn" hidden title="Imprimir os participantes filtrados ou salvar como PDF">Imprimir / PDF</button>
           </div>
 
           <!-- Lista de participantes (renderizada via JS) -->

@@ -13,6 +13,7 @@ import { criarMenu } from './componentes/menu.js';
 import { criarListaParticipantes } from './componentes/lista-participantes.js';
 import { renderizarGrade, renderizarEsqueleto } from './grade.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
+import { imprimirGrade } from './imprimir.js';
 import { debounce } from './logica/debounce.js';
 import { filtrarParticipantes, ordenarParticipantes } from './logica/filtros.js';
 
@@ -205,6 +206,7 @@ function sincronizarVisao() {
   const { modo, tamanhoGrade, abaAtiva, visoes } = obterEstado();
   for (const botao of document.querySelectorAll('[data-modo]')) botao.setAttribute('aria-pressed', String(botao.dataset.modo === modo));
   $('tamanhoGradeControles').hidden = modo !== 'grade';
+  $('imprimirGradeBtn').hidden = modo !== 'grade';
   for (const botao of document.querySelectorAll('[data-tamanho-grade]')) botao.setAttribute('aria-pressed', String(botao.dataset.tamanhoGrade === tamanhoGrade));
   const busca = visoes.get(abaAtiva)?.busca || '';
   if ($('memberSearch').value !== busca) $('memberSearch').value = busca;
@@ -403,6 +405,12 @@ export function iniciarGrupo() {
   $('refreshActiveGroupBtn').addEventListener('click', recarregarAtivo);
   $('avisoGrupoBtn').addEventListener('click', () => { if (acaoDoAviso) acaoDoAviso(); });
   $('copyPhonesBtn').addEventListener('click', comParticipantes(copiarTelefones));
+  $('imprimirGradeBtn').addEventListener('click', comParticipantes((grupo) => {
+    const { abaAtiva, visoes, tamanhoGrade } = obterEstado();
+    const visao = visoes.get(abaAtiva) || {};
+    imprimirGrade({ grupo, ...visao, busca: $('memberSearch').value, tamanho: tamanhoGrade })
+      .catch(() => mostrarAviso('Não foi possível abrir a impressão. Tente novamente.', 'error'));
+  }));
 
   const campoBusca = $('memberSearch');
   if (campoBusca) {

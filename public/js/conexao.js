@@ -6,7 +6,7 @@ import { aoMudar, obterEstado } from './estado.js';
 export const estaSincronizando = () => Boolean(obterEstado().conexao.syncProgress);
 
 /* Exportar durante a sincronização gera arquivos incompletos */
-export const BOTOES_EXPORTACAO = ['copyPhonesBtn', 'startBatchBtn'];
+export const BOTOES_EXPORTACAO = ['copyPhonesBtn', 'startBatchBtn', 'imprimirGradeBtn'];
 
 function renderizarConexao(s) {
   const pronto = s.status === 'ready';
