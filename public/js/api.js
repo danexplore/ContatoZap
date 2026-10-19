@@ -75,3 +75,14 @@ export function recarregarGrupos() {
 export function reiniciarConexao() {
   return fetch('/api/restart', { method: 'POST' });
 }
+
+export async function buscarGruposDoContato({ phone, id, exclude } = {}) {
+  const params = new URLSearchParams();
+  if (phone) params.set('phone', phone);
+  if (id) params.set('id', id);
+  if (exclude) params.set('exclude', exclude);
+  const res = await fetch(`/api/contact-groups?${params.toString()}`);
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error(data.error || 'Falha ao buscar grupos em comum.');
+  return Array.isArray(data) ? data : [];
+}

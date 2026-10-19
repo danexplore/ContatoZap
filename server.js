@@ -11,7 +11,7 @@ const log = require('./logger');
 const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
 const { urlLocal } = require('./lib/url-local');
 const { criarCacheFotos, lerIdsFotos } = require('./lib/fotos-grupos');
-const { lerCacheParticipantes } = require('./lib/cache-participantes');
+const { lerCacheParticipantes, gruposDoContato } = require('./lib/cache-participantes');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = process.env.HOST || '127.0.0.1'; // apenas local
@@ -633,6 +633,19 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && (url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/'))) {
       await servirArquivoPublico(res, RAIZ_PUBLICA, url.pathname);
       return logDone(res.statusCode);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/contact-groups') {
+      const phone = url.searchParams.get('phone') ?? '';
+      const id = url.searchParams.get('id') ?? '';
+      const exclude = url.searchParams.get('exclude') ?? '';
+      if (!phone && !id) {
+        sendJson(res, 400, { error: 'Informe phone ou id.' });
+        return logDone(400);
+      }
+      const resultado = gruposDoContato(participantsCache, { phone, id, exclude: exclude || undefined });
+      sendJson(res, 200, resultado);
+      return logDone(200);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/group-photos') {
