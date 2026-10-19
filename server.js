@@ -9,6 +9,7 @@ const { SqliteStore } = require('./sqlite-store');
 const { listGroups, getGroupParticipants } = require('./whatsapp-extractor');
 const log = require('./logger');
 const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
+const { urlLocal } = require('./lib/url-local');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = process.env.HOST || '127.0.0.1'; // apenas local
@@ -523,7 +524,12 @@ function sendJson(res, code, data) {
 
 const server = http.createServer(async (req, res) => {
   const startAt = Date.now();
-  const url = new URL(req.url, 'http://localhost');
+  const url = urlLocal(req.url);
+  if (!url) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end('Requisição inválida');
+    return;
+  }
 
   const logDone = (status) => {
     log.http(req.method, url.pathname, status, Date.now() - startAt);
