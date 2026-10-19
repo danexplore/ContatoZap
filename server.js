@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { exec, execFile } = require('child_process');
 const QRCode = require('qrcode');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
@@ -656,17 +657,38 @@ async function shutdown(signal) {
 }
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => shutdown(signal));
 
+// Com `node --watch`, o processo que vigia os arquivos é o pai e não muda entre
+// reinícios. Guardando o PID dele, a aba do navegador só abre na primeira subida.
+const BROWSER_OPENED_MARKER = path.join(os.tmpdir(), `extrator-whatsapp-${PORT}.browser`);
+function browserAlreadyOpened() {
+  try {
+    return fs.readFileSync(BROWSER_OPENED_MARKER, 'utf8') === String(process.ppid);
+  } catch {
+    return false;
+  }
+}
+
+function openBrowser(url) {
+  if (browserAlreadyOpened()) return;
+  try {
+    fs.writeFileSync(BROWSER_OPENED_MARKER, String(process.ppid));
+  } catch {
+    // Sem o marcador, só abre outra aba no próximo reinício
+  }
+  const cmd =
+    process.platform === 'win32'
+      ? `start "" "${url}"`
+      : process.platform === 'darwin'
+      ? `open "${url}"`
+      : `xdg-open "${url}"`;
+  exec(cmd, () => {});
+}
+
 if (require.main === module) {
   server.listen(PORT, HOST, () => {
     const url = `http://localhost:${PORT}`;
     log.success('SERVER', `Interface Web GUI iniciada com sucesso em ${url}`);
-    const cmd =
-      process.platform === 'win32'
-        ? `start "" "${url}"`
-        : process.platform === 'darwin'
-        ? `open "${url}"`
-        : `xdg-open "${url}"`;
-    exec(cmd, () => {});
+    openBrowser(url);
     killOrphanBrowsers().then(() => startClient());
   });
 }

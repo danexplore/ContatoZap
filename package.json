@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "watch": "node --watch --watch-preserve-output server.js",
     "gui": "node server.js",
     "cli": "node extrator-seletor.js"
   },
