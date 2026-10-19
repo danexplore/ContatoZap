@@ -652,6 +652,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: lidos.erro });
         return logDone(400);
       }
+      // Ids que não puderam ser consultados ficam fora do objeto (o front tenta de novo); null = grupo sem foto
       sendJson(res, 200, await cacheFotos.obter(lidos.ids));
       return logDone(200);
     }
