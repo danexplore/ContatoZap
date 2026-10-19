@@ -531,7 +531,7 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (req.method === 'GET' && url.pathname === '/') {
-      const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+      const html = fs.readFileSync(path.join(RAIZ_PUBLICA, 'index.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html);
       return logDone(200);
