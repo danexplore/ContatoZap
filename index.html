@@ -1256,9 +1256,11 @@ th.photo-col { position: relative; text-align: center; }
               <tr>
                 <th style="width:44px;" scope="col">#</th>
                 <th id="thPhoto" class="photo-col" style="width:56px;" scope="col">Foto<span class="col-resize-handle" id="photoResizeHandle" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="name" scope="col">Nome <span class="sort-icon" id="sortIconName" aria-hidden="true">▲</span></th>
-                <th class="sortable" data-sort="phone" scope="col">Telefone <span class="sort-icon" id="sortIconPhone" aria-hidden="true"></span></th>
-                <th class="sortable" data-sort="admin" style="width:120px;" scope="col">Tipo <span class="sort-icon" id="sortIconAdmin" aria-hidden="true"></span></th>
+                <th class="sortable" data-sort="nome_whatsapp" scope="col">Nome WhatsApp <span class="sort-icon" aria-hidden="true"></span></th>
+                <th class="sortable" data-sort="nome_agenda" scope="col">Nome Agenda <span class="sort-icon" aria-hidden="true"></span></th>
+                <th class="sortable" data-sort="telefone" scope="col">Telefone <span class="sort-icon" aria-hidden="true"></span></th>
+                <th class="sortable" data-sort="admin" style="width:90px;" scope="col">Admin <span class="sort-icon" aria-hidden="true"></span></th>
+                <th class="sortable" data-sort="status" style="width:190px;" scope="col">Status <span class="sort-icon" aria-hidden="true"></span></th>
               </tr>
             </thead>
             <tbody id="membersTbody"></tbody>
@@ -1338,7 +1340,8 @@ let selectedGroupIds = new Set();
 let activeGroup = null;
 let activeFilter = 'all';
 let memberSearchTerm = '';
-let sortColumn = 'name';
+// null = ordem original do grupo, a mesma do Excel
+let sortColumn = null;
 let sortAsc = true;
 let currentPage = 1;
 let pageSize = 50;
@@ -1645,6 +1648,21 @@ function createFallbackAvatar(name) {
 }
 
 /* ========== TABLE RENDERING & FILTERING ========== */
+// Mesmas colunas do Excel, mais # e Foto
+const MEMBER_TABLE_COLUMNS = 7;
+
+function createTextCell(text) {
+  const td = document.createElement('td');
+  td.textContent = text || '—';
+  return td;
+}
+
+function createBadge(text, variant) {
+  const badge = document.createElement('span');
+  badge.className = `tag-badge ${variant}`;
+  badge.textContent = text;
+  return badge;
+}
 function getFilteredAndSortedMembers() {
   if (!activeGroup || !activeGroup.participants) return [];
   let list = [...activeGroup.participants];
@@ -1652,15 +1670,15 @@ function getFilteredAndSortedMembers() {
   else if (activeFilter === 'admins') list = list.filter((p) => p.admin);
   else if (activeFilter === 'hidden') list = list.filter((p) => p.hidden);
   const q = memberSearchTerm.toLowerCase();
-  if (q) list = list.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.phone || '').includes(q));
-  list.sort((a, b) => {
-    let valA = a[sortColumn] ?? '';
-    let valB = b[sortColumn] ?? '';
-    if (sortColumn === 'admin') { valA = a.admin ? 1 : 0; valB = b.admin ? 1 : 0; }
-    if (typeof valA === 'string') return sortAsc ? valA.localeCompare(valB, 'pt-BR', { numeric: true }) : valB.localeCompare(valA, 'pt-BR', { numeric: true });
-    return sortAsc ? valA - valB : valB - valA;
+  if (q) list = list.filter((p) => [p.pushname, p.name, p.savedName].some((n) => (n || '').toLowerCase().includes(q)) || (p.phone || '').includes(q));
+  if (!sortColumn) return list;
+  // Ordena pelos mesmos valores que vão para as colunas do Excel
+  const keyed = list.map((p) => ({ p, key: toExcelRow(p)[sortColumn] }));
+  keyed.sort((a, b) => {
+    const cmp = a.key.localeCompare(b.key, 'pt-BR', { numeric: true });
+    return sortAsc ? cmp : -cmp;
   });
-  return list;
+  return keyed.map(({ p }) => p);
 }
 
 function renderTable() {
@@ -1682,7 +1700,7 @@ function renderTable() {
   if (!pageItems.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 5;
+    td.colSpan = MEMBER_TABLE_COLUMNS;
     td.style.textAlign = 'center';
     td.style.padding = 'var(--space-6)';
     td.style.color = 'hsl(var(--color-text-tertiary))';
@@ -1714,29 +1732,10 @@ function renderTable() {
     } else {
       tdPhoto.appendChild(createFallbackAvatar(p.pushname || p.name));
     }
-    const tdName = document.createElement('td');
-    const nameWrap = document.createElement('div');
-    nameWrap.style.display = 'flex';
-    nameWrap.style.flexDirection = 'column';
-    nameWrap.style.gap = '2px';
-    const mainName = document.createElement('span');
-    mainName.style.fontWeight = '500';
-    mainName.textContent = p.pushname || p.name || '—';
-    nameWrap.appendChild(mainName);
-    if (p.savedName && p.pushname && p.savedName !== p.pushname) {
-      const subName = document.createElement('span');
-      subName.style.font = 'var(--text-caption)';
-      subName.style.color = 'hsl(var(--color-text-tertiary))';
-      subName.textContent = `Agenda: ${p.savedName}`;
-      nameWrap.appendChild(subName);
-    } else if (!p.pushname && p.savedName) {
-      const subName = document.createElement('span');
-      subName.style.font = 'var(--text-caption)';
-      subName.style.color = 'hsl(var(--color-primary))';
-      subName.textContent = '(Salvo na Agenda)';
-      nameWrap.appendChild(subName);
-    }
-    tdName.appendChild(nameWrap);
+    const excel = toExcelRow(p);
+    const tdWhatsappName = createTextCell(excel.nome_whatsapp);
+    tdWhatsappName.style.fontWeight = '500';
+    const tdAgendaName = createTextCell(excel.nome_agenda);
     const tdPhone = document.createElement('td');
     const phoneWrap = document.createElement('div');
     phoneWrap.className = 'phone-cell';
@@ -1753,15 +1752,11 @@ function renderTable() {
       phoneWrap.appendChild(copyBtn);
     }
     tdPhone.appendChild(phoneWrap);
+    const tdAdmin = document.createElement('td');
+    tdAdmin.appendChild(createBadge(excel.admin, p.admin ? 'admin' : 'member'));
     const tdStatus = document.createElement('td');
-    if (p.admin) { const b = document.createElement('span'); b.className = 'tag-badge admin'; b.textContent = 'Admin'; tdStatus.appendChild(b); }
-    if (p.hidden) { const b = document.createElement('span'); b.className = 'tag-badge lid'; b.style.marginLeft = p.admin ? 'var(--space-1)' : '0'; b.textContent = 'Privacidade'; tdStatus.appendChild(b); }
-    if (!p.admin && !p.hidden) { const b = document.createElement('span'); b.className = 'tag-badge member'; b.textContent = 'Membro'; tdStatus.appendChild(b); }
-    tr.appendChild(tdIdx);
-    tr.appendChild(tdPhoto);
-    tr.appendChild(tdName);
-    tr.appendChild(tdPhone);
-    tr.appendChild(tdStatus);
+    tdStatus.appendChild(createBadge(excel.status, p.hidden ? 'lid' : 'member'));
+    tr.append(tdIdx, tdPhoto, tdWhatsappName, tdAgendaName, tdPhone, tdAdmin, tdStatus);
     tbody.appendChild(tr);
   });
 }
@@ -1784,16 +1779,21 @@ $('memberSearch').oninput = (e) => { memberSearchTerm = e.target.value.trim(); c
 document.querySelectorAll('th.sortable').forEach((th) => {
   th.onclick = () => {
     const col = th.dataset.sort;
-    if (sortColumn === col) sortAsc = !sortAsc; else { sortColumn = col; sortAsc = true; }
+    // Crescente → decrescente → ordem original (a do Excel)
+    if (sortColumn !== col) { sortColumn = col; sortAsc = true; }
+    else if (sortAsc) sortAsc = false;
+    else sortColumn = null;
     updateSortIcons();
     renderTable();
   };
 });
 
 function updateSortIcons() {
-  $('sortIconName').textContent = sortColumn === 'name' ? (sortAsc ? '▲' : '▼') : '';
-  $('sortIconPhone').textContent = sortColumn === 'phone' ? (sortAsc ? '▲' : '▼') : '';
-  $('sortIconAdmin').textContent = sortColumn === 'admin' ? (sortAsc ? '▲' : '▼') : '';
+  document.querySelectorAll('th.sortable').forEach((th) => {
+    const active = th.dataset.sort === sortColumn;
+    th.querySelector('.sort-icon').textContent = active ? (sortAsc ? '▲' : '▼') : '';
+    th.setAttribute('aria-sort', active ? (sortAsc ? 'ascending' : 'descending') : 'none');
+  });
 }
 
 // Pagination
