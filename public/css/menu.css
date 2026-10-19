@@ -1,0 +1,88 @@
+/* Menu dropdown acessível */
+.menu-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.menu-seta {
+  display: inline-flex;
+  margin-left: var(--space-1);
+  opacity: 0.7;
+}
+
+.menu-lista {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-dropdown, 100);
+  min-width: 180px;
+  padding: var(--space-1) 0;
+  margin: 0;
+  list-style: none;
+  background: hsl(var(--color-surface));
+  border: 1px solid hsl(var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.menu-lista[hidden] {
+  display: none;
+}
+
+.menu-lista li {
+  margin: 0;
+  padding: 0;
+}
+
+.menu-lista [role="menuitem"] {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: none;
+  color: hsl(var(--color-text));
+  font: var(--text-body-sm);
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu-lista [role="menuitem"]:hover,
+.menu-lista [role="menuitem"]:focus {
+  background: hsl(var(--color-primary-subtle));
+  outline: none;
+}
+
+/* Campo customizado dentro do menu (ex.: tamanho da foto) */
+.menu-lista .menu-campo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: var(--text-body-sm);
+  color: hsl(var(--color-text-secondary));
+  white-space: nowrap;
+}
+
+.menu-lista .menu-campo input {
+  width: 64px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid hsl(var(--color-border));
+  border-radius: var(--radius-sm);
+  background: hsl(var(--color-surface));
+  color: hsl(var(--color-text));
+  font: var(--text-body-sm);
+  text-align: right;
+}
+
+.menu-lista .menu-campo input:focus {
+  outline: 2px solid hsl(var(--color-primary));
+  outline-offset: -1px;
+  border-color: hsl(var(--color-primary));
+}
+
+.menu-separador {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: hsl(var(--color-border));
+}

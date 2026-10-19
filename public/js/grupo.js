@@ -1,13 +1,14 @@
 // Grupo da aba ativa: carregamento (com cache no navegador), cabeçalho, métricas, avisos e ações de exportação.
 import { $, mostrarAviso } from './ui.js';
 import { buscarGrupo } from './api.js';
-import { aoMudar, atualizarEstado, obterEstado, FOTO_EXCEL_MIN, FOTO_EXCEL_MAX } from './estado.js';
+import { aoMudar, atualizarEstado, atualizarVisao, obterEstado, FOTO_EXCEL_MIN, FOTO_EXCEL_MAX } from './estado.js';
 import { atualizarTamanhoGrupo } from './sidebar.js';
 import { abrirGrupo, fecharAba } from './abas.js';
 import { copiarTelefones, exportarCsv, exportarExcel, exportarJson } from './exportar.js';
 import { contarFiltros, separarSecoes } from './logica/filtros.js';
-import { textoMembros } from './logica/texto.js';
+import { textoMembros, tempoRelativo } from './logica/texto.js';
 import { criarAvatar } from './componentes/avatar.js';
+import { criarMenu } from './componentes/menu.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
 
 // conexao: a lista de grupos decide o "Grupo não encontrado"
@@ -98,22 +99,60 @@ function mostrarAvisoDoGrupo({ titulo, detalhe, botao, acao }) {
   acaoDoAviso = acao;
 }
 
+function criarChipFiltro(filtro, rotulo, contagem, ativo, aoClicar) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'chip-filtro' + (ativo ? ' ativo' : '');
+  btn.dataset.filtro = filtro;
+  btn.setAttribute('aria-pressed', String(ativo));
+  const texto = document.createElement('span');
+  texto.className = 'chip-rotulo';
+  texto.textContent = rotulo;
+  const badge = document.createElement('span');
+  badge.className = 'chip-contagem';
+  badge.textContent = String(contagem);
+  btn.append(texto, badge);
+  btn.addEventListener('click', aoClicar);
+  return btn;
+}
+
+function renderizarChipsDeFiltro(lista) {
+  const conteiner = $('groupFilterChips');
+  if (!conteiner) return;
+  const { abaAtiva } = obterEstado();
+  const visao = abaAtiva ? obterEstado().visoes.get(abaAtiva) : null;
+  const filtroAtual = visao?.filtro || 'todos';
+  const contagem = contarFiltros(lista);
+  const itens = [
+    { filtro: 'todos', rotulo: 'Todos' },
+    { filtro: 'telefone', rotulo: 'Com telefone' },
+    { filtro: 'admins', rotulo: 'Admins' },
+    { filtro: 'privados', rotulo: 'Privados' },
+  ];
+  conteiner.replaceChildren(
+    ...itens.map(({ filtro, rotulo }) =>
+      criarChipFiltro(filtro, rotulo, contagem[filtro], filtroAtual === filtro, () => {
+        if (abaAtiva) atualizarVisao(abaAtiva, { filtro });
+      })
+    )
+  );
+}
+
 function mostrarGrupo(grupo) {
   mostrarSomente('activeGroupView');
   $('activeGroupName').textContent = grupo.name;
   const lista = grupo.participants || [];
   const comFoto = lista.filter((p) => Boolean(p.photoUrl)).length;
   $('activeGroupCount').textContent = comFoto > 0 ? `${lista.length} participante(s) · ${comFoto} com foto` : `${lista.length} participante(s)`;
-  $('activeGroupDuration').textContent = grupo.durationSec ? `${grupo.durationSec}s` : 'Cache';
-  const contagem = contarFiltros(lista);
-  $('metricTotal').textContent = contagem.todos;
-  $('metricPhones').textContent = contagem.telefone;
-  $('metricAdmins').textContent = contagem.admins;
-  $('metricHidden').textContent = contagem.privados;
-  $('tabCountAll').textContent = contagem.todos;
-  $('tabCountPhones').textContent = contagem.telefone;
-  $('tabCountAdmins').textContent = contagem.admins;
-  $('tabCountHidden').textContent = contagem.privados;
+  const extracaoEl = $('activeGroupExtractedAt');
+  if (extracaoEl) {
+    extracaoEl.textContent = grupo.extractedAt ? tempoRelativo(grupo.extractedAt, Date.now()) : '';
+  }
+  const duracaoEl = $('activeGroupDuration');
+  if (duracaoEl) {
+    duracaoEl.textContent = grupo.durationSec ? `${grupo.durationSec}s` : 'Cache';
+  }
+  renderizarChipsDeFiltro(lista);
 }
 
 function renderizarGrupo() {
@@ -224,6 +263,44 @@ function recarregarAtivo() {
   if (abaAtiva) carregarGrupo(abaAtiva, { atualizar: true });
 }
 
+function montarMenuExportar() {
+  const conteiner = $('menuExportar');
+  if (!conteiner) return;
+  const estado = obterEstado();
+  const campoFoto = document.createElement('label');
+  campoFoto.className = 'menu-campo';
+  const rotulo = document.createElement('span');
+  rotulo.textContent = 'Foto no Excel (px)';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = String(FOTO_EXCEL_MIN);
+  input.max = String(FOTO_EXCEL_MAX);
+  input.step = '10';
+  input.value = String(estado.tamanhoFotoExcel);
+  input.setAttribute('aria-label', 'Tamanho da foto no Excel, em pixels');
+  input.addEventListener('change', () => {
+    const tamanho = parseInt(input.value, 10);
+    const valido = Number.isFinite(tamanho) ? Math.min(FOTO_EXCEL_MAX, Math.max(FOTO_EXCEL_MIN, tamanho)) : estado.tamanhoFotoExcel;
+    input.value = String(valido);
+    atualizarEstado({ tamanhoFotoExcel: valido });
+  });
+  // Impede que o clique no input feche o menu
+  input.addEventListener('click', (e) => e.stopPropagation());
+  campoFoto.append(rotulo, input);
+
+  const menu = criarMenu({
+    rotulo: 'Exportar',
+    principal: true,
+    itens: [
+      { rotulo: 'CSV', aoEscolher: comParticipantes(exportarCsv) },
+      { rotulo: 'Excel (.xlsx)', aoEscolher: comParticipantes((g) => exportarExcel(g, null)) },
+      { rotulo: 'JSON', aoEscolher: () => { const grupo = obterGrupoAtivo(); if (grupo) exportarJson(grupo); } },
+      { elemento: campoFoto },
+    ],
+  });
+  conteiner.replaceChildren(menu);
+}
+
 function iniciarPreferenciasDoGrupo() {
   const caixaFotos = $('fetchPhotosCheckbox');
   if (caixaFotos) {
@@ -236,17 +313,7 @@ function iniciarPreferenciasDoGrupo() {
       recarregarAtivo();
     });
   }
-
-  const campoFotoExcel = $('imageSizeInput');
-  if (campoFotoExcel) {
-    campoFotoExcel.value = obterEstado().tamanhoFotoExcel;
-    campoFotoExcel.addEventListener('change', () => {
-      const tamanho = parseInt(campoFotoExcel.value, 10);
-      const valido = Number.isFinite(tamanho) ? Math.min(FOTO_EXCEL_MAX, Math.max(FOTO_EXCEL_MIN, tamanho)) : obterEstado().tamanhoFotoExcel;
-      campoFotoExcel.value = valido;
-      atualizarEstado({ tamanhoFotoExcel: valido });
-    });
-  }
+  montarMenuExportar();
 }
 
 export function iniciarGrupo() {
@@ -257,9 +324,6 @@ export function iniciarGrupo() {
   $('refreshActiveGroupBtn').addEventListener('click', recarregarAtivo);
   $('avisoGrupoBtn').addEventListener('click', () => { if (acaoDoAviso) acaoDoAviso(); });
   $('copyPhonesBtn').addEventListener('click', comParticipantes(copiarTelefones));
-  $('exportCsvBtn').addEventListener('click', comParticipantes(exportarCsv));
-  $('exportExcelBtn').addEventListener('click', comParticipantes((g) => exportarExcel(g, $('exportExcelBtn'))));
-  $('exportJsonBtn').addEventListener('click', () => { const grupo = obterGrupoAtivo(); if (grupo) exportarJson(grupo); });
   iniciarPreferenciasDoGrupo();
   renderizarGrupo();
   renderizarTelaInicial($('emptyDetail'));
