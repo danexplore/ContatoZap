@@ -32,6 +32,7 @@
 - Fotos dos grupos: cache em memória `id → { url, timestamp }` por **1h (3.600.000 ms)**, guardando `null`; no máximo **3** consultas simultâneas; `/api/group-photos` aceita até **50** ids; **503** se o WhatsApp não está pronto; o front agrupa os ids visíveis a cada **~150ms**.
 - "Também está em" ignora o TTL de **5 minutos** do `participantsCache`.
 - Cor primária: teal da marca **`#0D9488`** (`175 84% 32%` em HSL) em `--color-primary`, claro e escuro.
+- Fundo de botão primário (texto branco): **`#0F766E`** (`175 77% 26%`) em `--color-primary-solid`, nos dois temas — contraste 5,5:1 (WCAG AA). O `#0D9488` fica para links, seleção, abas ativas, foco e logo.
 - Alvos de toque ≥ **44px** em `@media (pointer: coarse)`; animações desligadas em `prefers-reduced-motion: reduce`.
 - Exportação: mesmo formato de hoje (CSV, Excel, JSON), sempre o grupo inteiro, independente de filtro e busca.
 - Componentes: `criarX(props)` devolve `HTMLElement`, não guarda estado, não chama a API; ações saem por callbacks em `props` (`aoClicar`, `aoFixar`…).
@@ -116,13 +117,14 @@ assert.equal(tipoConteudo('x.css'), 'text/css; charset=utf-8');
 - Produces: `tokens.css` com todas as variáveis `:root` e `[data-theme="dark"]` hoje em `index.html` (linhas ~13–130: cores, `--space-*`, `--radius-*`, `--shadow-*`, `--text-*`, z-index), mais:
   - claro: `--color-primary: 175 84% 32%`, `--color-primary-hover: 175 84% 27%`, `--color-primary-active: 175 85% 22%`, `--color-primary-subtle: 170 60% 94%`, `--color-border-focus: 175 84% 32%`
   - escuro: `--color-primary: 172 66% 50%`, `--color-primary-hover: 172 66% 58%`, `--color-primary-active: 172 70% 65%`, `--color-primary-subtle: 175 50% 14%`, `--color-border-focus: 172 66% 50%`
+  - botões primários (claro e escuro iguais): `--color-primary-solid: 175 77% 26%`, `--color-primary-solid-hover: 175 80% 21%`, `--color-on-primary-solid: 0 0% 100%`; `.btn.primary` usa esses três em vez de `--color-primary`
   - novos: `--sidebar-largura: 300px`, `--trilho-largura: 56px`, `--grade-p: 120px`, `--grade-m: 160px`, `--grade-g: 220px`, `--alvo-toque: 44px`.
 
 - [ ] **Passo 1:** Copiar os tokens para `public/css/tokens.css` com os valores teal acima (formato HSL sem `hsl()`, como hoje).
 - [ ] **Passo 2:** Atualizar as tabelas de `docs/design.md` §2.1/§2.2 com os mesmos valores e uma nota: "Primária = teal da marca (`#0D9488`, `docs/brand.md` §4)". Corrigir menções a "azul" como primária.
 - [ ] **Passo 3:** Commit `feat: teal da marca como cor primária`.
 
-**Pronto quando:** rota `/` (ainda o `index.html` antigo) mostra botões primários, foco e abas ativas em teal no claro e no escuro.
+**Pronto quando:** rota `/` (ainda o `index.html` antigo) mostra botões primários em `#0F766E` com texto branco, e foco/abas ativas em teal `#0D9488`, no claro e no escuro.
 
 ### Tarefa 1.3: Migração do `index.html` para `public/` — [Opus] [Segurança: DOM]
 

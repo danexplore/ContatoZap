@@ -30,7 +30,7 @@ Extras aprovados: ficha do participante com "Também está em", barra de ações
 | Grade | Galeria: a foto ocupa o card, com nome e telefone embaixo. Tamanho P/M/G. |
 | Ficha do participante | Painel lateral que divide a tela (≥1280px). Abaixo disso abre como gaveta por cima. |
 | Celular | ☰ abre a sidebar como gaveta. Exportar fica no cabeçalho do grupo. |
-| Paleta | Teal da marca (`#0D9488`, do `docs/brand.md`) como cor primária, interface clara. O modo escuro continua. |
+| Paleta | Teal da marca (`#0D9488`, do `docs/brand.md`) como cor primária, interface clara. Botões primários com fundo `#0F766E` (texto branco, contraste 5,5:1, WCAG AA). O modo escuro continua. |
 
 O `docs/design.md` passa a usar o teal como `--color-primary` (e as variações hover/active/subtle), nos modos claro e escuro, para acabar com a divergência com o `brand.md`.
 
