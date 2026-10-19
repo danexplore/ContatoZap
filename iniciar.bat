@@ -31,10 +31,11 @@ if not exist "node_modules\" (
 )
 
 echo [*] Iniciando o servidor e abrindo a interface...
+echo [*] O servidor reinicia sozinho quando o código muda.
 echo [*] Pressione CTRL + C para encerrar.
 echo.
 
-call npm start
+call npm run watch
 
 if %errorlevel% neq 0 (
     echo.

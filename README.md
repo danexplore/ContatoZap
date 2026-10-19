@@ -76,7 +76,7 @@ Antes de começar, você precisa ter instalado no seu computador:
    npm start
    ```
    O navegador abrirá automaticamente em `http://localhost:3000`.
-   Para o servidor reiniciar sozinho quando o código mudar, use `npm run watch` (é o que o `iniciar.sh` usa).
+   Para o servidor reiniciar sozinho quando o código mudar, use `npm run watch` (é o que o `iniciar.sh` e o `iniciar.bat` usam).
 
 4. **Escaneie o QR Code:**
    - Abra o WhatsApp no seu celular.

@@ -47,12 +47,35 @@ async function discardDeadSession(c) {
 }
 
 // Chromes de execuções anteriores que ficaram abertos (servidor morto sem fechar o navegador)
-// continuam usando a sessão e derrubam a conexão nova.
+// continuam usando a sessão e derrubam a conexão nova. No Windows isso acontece a cada
+// reinício do `npm run watch`, que encerra o servidor sem dar chance de fechar o Chrome.
+const ORPHAN_BROWSER_FLAG = `--user-data-dir=${path.join(__dirname, '.wwebjs_auth')}`;
+
+// O caminho vai por variável de ambiente para não precisar escapar aspas no PowerShell.
+const KILL_ORPHANS_POWERSHELL = `
+$alvo = $env:EXTRATOR_ORPHAN_FLAG.ToLower()
+$orfaos = Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='chrome-headless-shell.exe'" |
+  Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Contains($alvo) }
+if (-not $orfaos) { exit 1 }
+$orfaos | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+`;
+
+function runOrphanKiller(callback) {
+  if (process.platform === 'win32') {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', KILL_ORPHANS_POWERSHELL],
+      { env: { ...process.env, EXTRATOR_ORPHAN_FLAG: ORPHAN_BROWSER_FLAG }, windowsHide: true },
+      callback
+    );
+  } else {
+    execFile('pkill', ['-f', '--', ORPHAN_BROWSER_FLAG], callback);
+  }
+}
+
 function killOrphanBrowsers() {
-  if (process.platform === 'win32') return Promise.resolve();
-  const profileDir = path.join(__dirname, '.wwebjs_auth');
   return new Promise((resolve) => {
-    execFile('pkill', ['-f', '--', `--user-data-dir=${profileDir}`], (err) => {
+    runOrphanKiller((err) => {
       if (!err) log.warn('CLIENT', 'Chromes abertos de execuções anteriores foram encerrados');
       resolve();
     });
