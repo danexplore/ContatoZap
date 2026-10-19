@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const QRCode = require('qrcode');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const { SqliteStore } = require('./sqlite-store');
@@ -17,6 +17,46 @@ const msg = (err) => (err && err.message ? err.message : String(err));
 // O WhatsApp Web às vezes recarrega a página durante a inicialização; uma nova tentativa resolve.
 const MAX_INIT_RETRIES = 2;
 const isTransientInitError = (err) => /Execution context was destroyed|detached Frame|Target closed/i.test(msg(err));
+
+// Quando o WhatsApp desconecta o aparelho, a página vai para ?post_logout=1 logo após o erro.
+async function wasLoggedOut(c) {
+  for (let i = 0; i < 10; i++) {
+    try {
+      if (c.pupPage && c.pupPage.url().includes('post_logout=1')) return true;
+    } catch {
+      return false;
+    }
+    await sleep(500);
+  }
+  return false;
+}
+
+async function discardDeadSession(c) {
+  try {
+    await Promise.race([c.destroy(), sleep(8000)]);
+  } catch (err) {
+    log.warn('CLIENT', `Erro ao fechar navegador da sessão encerrada: ${msg(err)}`);
+  }
+  try {
+    await c.authStrategy.disconnect();
+    log.info('AUTH', 'Sessão encerrada apagada do session.db e do disco');
+  } catch (err) {
+    log.warn('AUTH', `Erro ao apagar sessão encerrada: ${msg(err)}`);
+  }
+}
+
+// Chromes de execuções anteriores que ficaram abertos (servidor morto sem fechar o navegador)
+// continuam usando a sessão e derrubam a conexão nova.
+function killOrphanBrowsers() {
+  if (process.platform === 'win32') return Promise.resolve();
+  const profileDir = path.join(__dirname, '.wwebjs_auth');
+  return new Promise((resolve) => {
+    execFile('pkill', ['-f', '--', `--user-data-dir=${profileDir}`], (err) => {
+      if (!err) log.warn('CLIENT', 'Chromes abertos de execuções anteriores foram encerrados');
+      resolve();
+    });
+  });
+}
 
 // Sessão armazenada em SQLite local (session.db)
 const store = new SqliteStore({ dbPath: path.join(__dirname, 'session.db') });
@@ -314,6 +354,13 @@ async function startClient(retry = 0) {
     log.info('CLIENT', 'Inicializando navegador Puppeteer...');
     await c.initialize();
   } catch (err) {
+    if (live() && (await wasLoggedOut(c))) {
+      log.warn('AUTH', 'O WhatsApp desconectou este aparelho. Apagando a sessão salva para gerar um novo QR code...');
+      setState({ message: 'Sessão encerrada pelo WhatsApp. Gerando novo QR code...' });
+      await discardDeadSession(c);
+      if (live()) startClient();
+      return;
+    }
     if (live() && isTransientInitError(err) && retry < MAX_INIT_RETRIES) {
       const next = retry + 1;
       log.warn('CLIENT', `WhatsApp Web recarregou durante a inicialização (${msg(err)}). Reiniciando (tentativa ${next}/${MAX_INIT_RETRIES})...`);
@@ -597,12 +644,17 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-process.on('SIGINT', async () => {
-  log.info('SERVER', 'Encerrando servidor por comando SIGINT...');
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info('SERVER', `Encerrando servidor (${signal})...`);
+  setTimeout(() => process.exit(0), 25000).unref();
   await stopClient();
   store.close();
   process.exit(0);
-});
+}
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(signal, () => shutdown(signal));
 
 if (require.main === module) {
   server.listen(PORT, HOST, () => {
@@ -615,7 +667,7 @@ if (require.main === module) {
         ? `open "${url}"`
         : `xdg-open "${url}"`;
     exec(cmd, () => {});
-    startClient();
+    killOrphanBrowsers().then(() => startClient());
   });
 }
 
