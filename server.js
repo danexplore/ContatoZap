@@ -11,6 +11,7 @@ const log = require('./logger');
 const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
 const { urlLocal } = require('./lib/url-local');
 const { criarCacheFotos, lerIdsFotos } = require('./lib/fotos-grupos');
+const { lerCacheParticipantes } = require('./lib/cache-participantes');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = process.env.HOST || '127.0.0.1'; // apenas local
@@ -483,18 +484,10 @@ async function getParticipants(id, forceRefresh = false, fetchPhotos = false) {
 
   const cacheKey = `${id}:${fetchPhotos ? 'with_photos' : 'basic'}`;
   if (!forceRefresh) {
-    if (participantsCache.has(cacheKey)) {
-      const entry = participantsCache.get(cacheKey);
-      if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
-        log.info('CACHE', `Retornando participantes do cache em memória para o grupo ${id}`);
-        return entry.data;
-      }
-    } else if (!fetchPhotos && participantsCache.has(`${id}:with_photos`)) {
-      const entry = participantsCache.get(`${id}:with_photos`);
-      if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
-        log.info('CACHE', `Retornando participantes (com fotos em cache) para o grupo ${id}`);
-        return entry.data;
-      }
+    const emCache = lerCacheParticipantes(participantsCache, id, fetchPhotos, Date.now());
+    if (emCache) {
+      log.info('CACHE', `Retornando participantes do cache em memória para o grupo ${id}`);
+      return emCache;
     }
   }
 
