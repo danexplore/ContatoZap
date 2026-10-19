@@ -2,9 +2,9 @@
 .lista-participantes-wrapper {
   flex: 1;
   overflow: auto;
-  border: 1px solid hsl(var(--color-border));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: var(--radius-md);
-  background: hsl(var(--color-surface));
+  background: hsl(var(--color-bg-primary));
 }
 
 .lista-participantes {
@@ -18,8 +18,8 @@
   top: 0;
   z-index: 2;
   padding: var(--space-2) var(--space-3);
-  background: hsl(var(--color-surface-alt));
-  border-bottom: 2px solid hsl(var(--color-border));
+  background: hsl(var(--color-bg-tertiary));
+  border-bottom: 2px solid hsl(var(--color-border-default));
   color: hsl(var(--color-text-secondary));
   font-weight: 600;
   text-align: left;
@@ -46,7 +46,7 @@
 }
 
 .lista-participantes tbody tr {
-  border-bottom: 1px solid hsl(var(--color-border-subtle, var(--color-border)));
+  border-bottom: 1px solid hsl(var(--color-border-subtle, var(--color-border-default)));
   transition: background 0.1s;
 }
 

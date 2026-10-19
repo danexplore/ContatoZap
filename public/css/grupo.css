@@ -333,3 +333,17 @@ th.photo-col { position: relative; text-align: center; }
 @media (pointer: coarse) {
   td { min-height: 44px; }
 }
+
+.detail-card, .detail-title-group, #activeGroupView, #painelGrupo { min-width: 0; }
+.detail-title-group h2 { overflow-wrap: anywhere; }
+.detail-meta { flex-wrap: wrap; }
+#areaParticipantes { max-height: calc(100dvh - 300px); min-height: 160px; overflow: auto; }
+.controles-visao { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); }
+.controles-visao [aria-pressed="true"] { background: hsl(var(--color-primary-subtle)); border-color: hsl(var(--color-primary)); }
+@media (max-width: 767px) {
+  .detail-card { padding: var(--space-4); }
+  .abas-faixa { margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0; }
+  .detail-actions #menuExportar { flex: 1; }
+  .detail-actions .menu-dropdown, .detail-actions .menu-dropdown > button { width: 100%; }
+  .detail-meta { gap: var(--space-2); }
+}

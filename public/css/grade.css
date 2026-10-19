@@ -7,16 +7,17 @@
 
 @media (max-width: 767px) {
   .grade-participantes {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .card-participante {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid hsl(var(--color-border));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: var(--radius-md);
-  background: hsl(var(--color-surface));
+  background: hsl(var(--color-bg-primary));
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -40,7 +41,7 @@
   position: relative;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: hsl(var(--color-surface-alt));
+  background: hsl(var(--color-bg-tertiary));
 }
 
 .card-foto-wrap .avatar--preencher {
@@ -84,7 +85,7 @@
 .card-nome {
   font: var(--text-body-sm);
   font-weight: 500;
-  color: hsl(var(--color-text));
+  color: hsl(var(--color-text-primary));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -131,7 +132,7 @@
 .esqueleto-linha {
   height: 1rem;
   border-radius: var(--radius-sm);
-  background: hsl(var(--color-border));
+  background: hsl(var(--color-border-default));
 }
 
 .esqueleto-linha.curta { width: 40%; }
@@ -147,7 +148,7 @@
 .esqueleto-card {
   aspect-ratio: 3 / 4;
   border-radius: var(--radius-md);
-  background: hsl(var(--color-border));
+  background: hsl(var(--color-border-default));
 }
 
 .esqueleto-lista {
@@ -159,7 +160,7 @@
 .esqueleto-linha-tabela {
   height: 44px;
   border-radius: var(--radius-sm);
-  background: hsl(var(--color-border));
+  background: hsl(var(--color-border-default));
 }
 
 .aviso-grupo-grande {

@@ -11,9 +11,9 @@
  align-items: center;
  gap: var(--space-1);
  padding: var(--space-1) var(--space-3);
- border: 1px solid hsl(var(--color-border));
+ border: 1px solid hsl(var(--color-border-default));
  border-radius: var(--radius-full, 999px);
- background: hsl(var(--color-surface));
+ background: hsl(var(--color-bg-primary));
  color: hsl(var(--color-text-secondary));
  font: var(--text-body-sm);
  cursor: pointer;
@@ -23,7 +23,7 @@
 
 .chip-filtro:hover {
  border-color: hsl(var(--color-primary));
- color: hsl(var(--color-text));
+ color: hsl(var(--color-text-primary));
 }
 
 .chip-filtro:focus-visible {
@@ -49,7 +49,7 @@
  min-width: 1.4em;
  padding: 0 var(--space-1);
  border-radius: var(--radius-full, 999px);
- background: hsl(var(--color-border));
+ background: hsl(var(--color-border-default));
  color: hsl(var(--color-text-secondary));
  font-size: 0.85em;
  font-weight: 600;

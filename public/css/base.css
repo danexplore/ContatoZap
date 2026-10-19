@@ -382,3 +382,24 @@ select.styled-select:focus { outline: none; border-color: hsl(var(--color-border
 @media (pointer: coarse) {
   .btn.sm { min-height: 44px; }
 }
+
+/* Interativos do redesign: foco, toque e movimento reduzido. */
+:where(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--color-border-focus));
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  button, .btn, [role="button"], .group-abrir, .estrela, .aba-botao,
+  .aba-fechar, .chip-filtro, .busca-opcao, .menu-lista [role="menuitem"],
+  input[type="checkbox"] {
+    min-width: var(--alvo-toque);
+    min-height: var(--alvo-toque);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
