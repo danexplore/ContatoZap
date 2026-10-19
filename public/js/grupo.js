@@ -1,7 +1,7 @@
 // Grupo aberto: carregamento (com cache no navegador), cabeçalho, métricas e ações de exportação.
 import { $, mostrarAviso } from './ui.js';
 import { buscarGrupo } from './api.js';
-import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
+import { aoMudar, atualizarEstado, obterEstado, FOTO_EXCEL_MIN, FOTO_EXCEL_MAX } from './estado.js';
 import { atualizarTamanhoGrupo } from './sidebar.js';
 import { copiarTelefones, exportarCsv, exportarExcel, exportarJson } from './exportar.js';
 import { contarFiltros } from './logica/filtros.js';
@@ -120,7 +120,7 @@ function iniciarPreferenciasDoGrupo() {
     campoFotoExcel.value = obterEstado().tamanhoFotoExcel;
     campoFotoExcel.addEventListener('change', () => {
       const tamanho = parseInt(campoFotoExcel.value, 10);
-      const valido = Number.isFinite(tamanho) ? Math.min(500, Math.max(20, tamanho)) : obterEstado().tamanhoFotoExcel;
+      const valido = Number.isFinite(tamanho) ? Math.min(FOTO_EXCEL_MAX, Math.max(FOTO_EXCEL_MIN, tamanho)) : obterEstado().tamanhoFotoExcel;
       campoFotoExcel.value = valido;
       atualizarEstado({ tamanhoFotoExcel: valido });
     });

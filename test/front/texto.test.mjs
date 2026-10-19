@@ -43,6 +43,16 @@ test('iniciais: primeira letra do primeiro e do último nome', () => {
   assert.equal(iniciais('   '), '?');
 });
 
+test('iniciais ignoram emoji, bandeira, pontuação e caracteres invisíveis', () => {
+  assert.equal(iniciais('🏠 Família'), 'F');
+  assert.equal(iniciais('🏠 Família Silva'), 'FS');
+  assert.equal(iniciais('🇧🇷 Brasil'), 'B');
+  assert.equal(iniciais('\u200EJoão Silva'), 'JS');
+  assert.equal(iniciais('(Turma) 2024'), 'T2');
+  assert.equal(iniciais('🏠🎉'), '?');
+  assert.equal(iniciais('🏠 🎉 !!!'), '?');
+});
+
 test('tempoRelativo', () => {
   assert.equal(tempoRelativo(0, 59_000), 'agora mesmo');
   assert.equal(tempoRelativo(0, 5 * 60_000), 'há 5 min');

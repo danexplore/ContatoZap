@@ -34,8 +34,8 @@ test('filtrarParticipantes busca nome sem acento e sem caixa', () => {
 });
 
 test('filtrarParticipantes ignora formatação do telefone', () => {
-  for (const b of ['(11) 98765-4321', '+55 11 9876', '987654321']) {
-    assert.equal(filtrarParticipantes(ps, { busca: b }).length, 1, b);
+  for (const b of ['(11) 98765-4321', '+55 11 9876', '987654321', '(11) 9']) {
+    assert.deepEqual(filtrarParticipantes(ps, { busca: b }).map((p) => p.pushname), ['João'], b);
   }
 });
 

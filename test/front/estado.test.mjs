@@ -41,8 +41,26 @@ test('carregarPreferencias ignora valor corrompido', () => {
 test('carregarPreferencias não quebra quando o armazenamento falha', () => {
   assert.doesNotThrow(() => carregarPreferencias({ getItem() { throw new Error('bloqueado'); } }));
   assert.equal(carregarPreferencias({ getItem() { throw new Error('bloqueado'); } }).modo, 'lista');
-  assert.equal(carregarPreferencias(undefined).tamanhoGrade, 'M');
   assert.equal(carregarPreferencias(null).tamanhoGrade, 'M');
+});
+
+test('carregarPreferencias sem argumento usa o localStorage do navegador e sobrevive se o acesso lançar', () => {
+  const anterior = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  try {
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('bloqueado'); } });
+    assert.equal(carregarPreferencias().modo, 'lista');
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: falso({ contatozap_modo: 'grade' }) });
+    assert.equal(carregarPreferencias().modo, 'grade');
+  } finally {
+    if (anterior) Object.defineProperty(globalThis, 'localStorage', anterior);
+    else delete globalThis.localStorage;
+  }
+});
+
+test('iniciarEstado ignora recentes que não são JSON', () => {
+  iniciarEstado(falso({ contatozap_recentes: 'oi', contatozap_fixados: '{oi' }));
+  assert.deepEqual(obterEstado().recentes, []);
+  assert.deepEqual(obterEstado().fixados, []);
 });
 
 test('carregarPreferencias lê valores válidos', () => {

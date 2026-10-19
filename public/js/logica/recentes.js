@@ -8,9 +8,9 @@ export function abrirRecente(lista, { id, name }, agora, limite = LIMITE_RECENTE
   }
   let nova = [{ id, name, usadoEm: agora }, ...lista];
   while (nova.length > limite) {
-    // Índice 0 é o recém-aberto: procura o mais antigo só entre os demais
+    // Índice 0 é o recém-aberto: procura o mais antigo só entre os demais; no empate, o mais à direita
     let maisAntigo = 1;
-    for (let i = 2; i < nova.length; i++) if (nova[i].usadoEm < nova[maisAntigo].usadoEm) maisAntigo = i;
+    for (let i = 2; i < nova.length; i++) if (nova[i].usadoEm <= nova[maisAntigo].usadoEm) maisAntigo = i;
     if (maisAntigo >= nova.length) break;
     nova = nova.filter((_, i) => i !== maisAntigo);
   }

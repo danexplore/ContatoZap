@@ -31,12 +31,14 @@ export function formatarTelefone(telefone) {
   return `+${digitos}`;
 }
 
+// Ignora emoji, bandeira, pontuação e marcas invisíveis (como U+200E) no começo da palavra
+const primeiraLetraOuNumero = (palavra) => palavra.match(/[\p{L}\p{N}]/u)?.[0];
+
 export function iniciais(nome) {
-  const partes = String(nome ?? '').trim().split(/\s+/).filter(Boolean);
-  if (!partes.length) return '?';
-  const primeira = Array.from(partes[0])[0];
-  const ultima = partes.length > 1 ? Array.from(partes[partes.length - 1])[0] : '';
-  return (primeira + ultima).toUpperCase();
+  const letras = String(nome ?? '').split(/\s+/).map(primeiraLetraOuNumero).filter(Boolean);
+  if (!letras.length) return '?';
+  const ultima = letras.length > 1 ? letras[letras.length - 1] : '';
+  return (letras[0] + ultima).toUpperCase();
 }
 
 const MINUTO = 60_000;

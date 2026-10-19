@@ -32,6 +32,11 @@ test('abrirRecente com limite menor nunca remove o recém-aberto', () => {
   assert.deepEqual(l.map((r) => r.id), ['b']);
 });
 
+test('abrirRecente em empate de usadoEm remove o mais à direita', () => {
+  const l = [{ id: 'a', name: 'A', usadoEm: 0 }, { id: 'b', name: 'B', usadoEm: 0 }, { id: 'c', name: 'C', usadoEm: 0 }];
+  assert.deepEqual(abrirRecente(l, { id: 'd', name: 'D' }, 9, 3).map((r) => r.id), ['d', 'a', 'b']);
+});
+
 test('fecharRecente escolhe a próxima ativa', () => {
   let l = oitoAbertos();
   l = abrirRecente(l, { id: 'g1', name: 'G1' }, 100);

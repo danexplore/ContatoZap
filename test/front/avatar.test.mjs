@@ -40,7 +40,7 @@ test('mostra as iniciais como texto, na cor do id, escondido do leitor de tela',
 
 test('nome com HTML vira só iniciais em texto', () => {
   const a = criarAvatar({ id: 'x', nome: '<img src=x onerror=alert(1)>' });
-  assert.equal(a.children[0].textContent, '<O');
+  assert.equal(a.children[0].textContent, 'IO');
 });
 
 test('preencher e quadrado', () => {

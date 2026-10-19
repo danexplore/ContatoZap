@@ -5,8 +5,8 @@ import { FILTROS } from './logica/filtros.js';
 
 const MODOS = ['lista', 'grade'];
 const TAMANHOS_GRADE = ['P', 'M', 'G'];
-const FOTO_EXCEL_MIN = 20;
-const FOTO_EXCEL_MAX = 500;
+export const FOTO_EXCEL_MIN = 20;
+export const FOTO_EXCEL_MAX = 500;
 
 function lerJson(texto) {
   try { return JSON.parse(texto); } catch { return undefined; }
@@ -100,7 +100,8 @@ function estadoInicial(armazenamento) {
 }
 
 let armazenamentoAtual;
-let estado = estadoInicial(undefined);
+// null: o módulo não lê o localStorage ao ser importado; quem lê é iniciarEstado
+let estado = estadoInicial(null);
 let ouvintes = new Set();
 
 // Chamado uma vez pelo app.js, antes de as áreas assinarem. Recomeçar descarta os ouvintes.

@@ -223,11 +223,11 @@ td.photo-cell { padding-inline: var(--space-2); text-align: center; }
   border: 2px solid hsl(var(--color-bg-primary));
   transition: transform 150ms ease-out, box-shadow 150ms ease-out;
 }
-.member-avatar.com-foto { cursor: zoom-in; }
-.member-avatar.com-foto:hover { transform: scale(1.15); box-shadow: var(--shadow-md); }
+.member-avatar:has(.avatar--com-foto) { cursor: zoom-in; }
+.member-avatar:has(.avatar--com-foto):hover { transform: scale(1.15); box-shadow: var(--shadow-md); }
 @media (prefers-reduced-motion: reduce) {
   .member-avatar { transition: none; }
-  .member-avatar.com-foto:hover { transform: none; }
+  .member-avatar:has(.avatar--com-foto):hover { transform: none; }
 }
 
 /* ========== TABLE FOOTER / PAGINATION ========== */

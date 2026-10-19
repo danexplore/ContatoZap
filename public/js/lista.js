@@ -46,12 +46,12 @@ function criarCelulaFoto(p) {
   moldura.className = 'member-avatar';
   moldura.appendChild(avatar);
   if (p.photoUrl) {
-    // Só amplia enquanto a foto existe; se ela falhar, o avatar a remove e ficam as iniciais
-    moldura.classList.add('com-foto');
+    // Só amplia enquanto a foto existe; se ela falhar, o avatar tira a classe e ficam as iniciais
+    const comFoto = () => avatar.classList.contains('avatar--com-foto');
     moldura.title = 'Clique para ver a foto ampliada';
-    avatar.querySelector('img').addEventListener('error', () => { moldura.classList.remove('com-foto'); moldura.title = ''; });
+    moldura.addEventListener('mouseenter', () => { moldura.title = comFoto() ? 'Clique para ver a foto ampliada' : ''; });
     moldura.addEventListener('click', (e) => {
-      if (!moldura.classList.contains('com-foto')) return;
+      if (!comFoto()) return;
       e.stopPropagation();
       abrirPreviewFoto(p.photoUrl, nomeExibido);
     });
