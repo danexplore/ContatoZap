@@ -10,6 +10,7 @@ import { textoMembros, tempoRelativo } from './logica/texto.js';
 import { criarAvatar } from './componentes/avatar.js';
 import { criarMenu } from './componentes/menu.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
+import { debounce } from './logica/debounce.js';
 
 // conexao: a lista de grupos decide o "Grupo não encontrado"
 const CHAVES_GRUPO = ['abaAtiva', 'grupos', 'conexao'];
@@ -324,6 +325,16 @@ export function iniciarGrupo() {
   $('refreshActiveGroupBtn').addEventListener('click', recarregarAtivo);
   $('avisoGrupoBtn').addEventListener('click', () => { if (acaoDoAviso) acaoDoAviso(); });
   $('copyPhonesBtn').addEventListener('click', comParticipantes(copiarTelefones));
+
+  const campoBusca = $('memberSearch');
+  if (campoBusca) {
+    const buscaDebounce = debounce((valor) => {
+      const { abaAtiva } = obterEstado();
+      if (abaAtiva) atualizarVisao(abaAtiva, { busca: valor });
+    }, 200);
+    campoBusca.addEventListener('input', (e) => buscaDebounce.chamar(e.target.value));
+  }
+
   iniciarPreferenciasDoGrupo();
   renderizarGrupo();
   renderizarTelaInicial($('emptyDetail'));
