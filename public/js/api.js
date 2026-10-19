@@ -46,6 +46,13 @@ export async function buscarGrupo(id, { atualizar = false, fotos = false } = {})
   return data;
 }
 
+export async function buscarFotosGrupos(ids) {
+  const res = await fetch(`/api/group-photos?ids=${ids.map(encodeURIComponent).join(',')}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Falha ao buscar fotos dos grupos (${res.status})`);
+  return data;
+}
+
 export async function iniciarLote(ids, fotos) {
   const res = await fetch('/api/batch-extract', {
     method: 'POST',
