@@ -9,8 +9,10 @@ import { contarFiltros, separarSecoes } from './logica/filtros.js';
 import { textoMembros, tempoRelativo } from './logica/texto.js';
 import { criarAvatar } from './componentes/avatar.js';
 import { criarMenu } from './componentes/menu.js';
+import { criarListaParticipantes } from './componentes/lista-participantes.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
 import { debounce } from './logica/debounce.js';
+import { filtrarParticipantes, ordenarParticipantes } from './logica/filtros.js';
 
 // conexao: a lista de grupos decide o "Grupo não encontrado"
 const CHAVES_GRUPO = ['abaAtiva', 'grupos', 'conexao'];
@@ -139,6 +141,43 @@ function renderizarChipsDeFiltro(lista) {
   );
 }
 
+function renderizarListaDeParticipantes(grupo) {
+  const conteiner = $('areaParticipantes');
+  if (!conteiner) return;
+  const { abaAtiva } = obterEstado();
+  const visao = abaAtiva ? obterEstado().visoes.get(abaAtiva) : null;
+  const filtro = visao?.filtro || 'todos';
+  const busca = visao?.busca || '';
+  const ordenacao = visao?.ordenacao || { coluna: null, asc: true };
+  const fichaAberta = obterEstado().fichaAberta || null;
+
+  const filtrados = filtrarParticipantes(grupo.participants || [], { filtro, busca });
+  const ordenados = ordenarParticipantes(filtrados, ordenacao.coluna, ordenacao.asc);
+
+  const lista = criarListaParticipantes({
+    participantes: ordenados,
+    ordenacao,
+    aoOrdenar: (coluna) => {
+      if (!abaAtiva) return;
+      const atual = obterEstado().visoes.get(abaAtiva)?.ordenacao || { coluna: null, asc: true };
+      let nova;
+      if (atual.coluna !== coluna) {
+        nova = { coluna, asc: true };
+      } else if (atual.asc) {
+        nova = { coluna, asc: false };
+      } else {
+        nova = { coluna: null, asc: true };
+      }
+      atualizarVisao(abaAtiva, { ordenacao: nova });
+    },
+    aoAbrir: (id) => {
+      atualizarEstado({ fichaAberta: id === obterEstado().fichaAberta ? null : id });
+    },
+    fichaAberta,
+  });
+  conteiner.replaceChildren(lista);
+}
+
 function mostrarGrupo(grupo) {
   mostrarSomente('activeGroupView');
   $('activeGroupName').textContent = grupo.name;
@@ -154,6 +193,7 @@ function mostrarGrupo(grupo) {
     duracaoEl.textContent = grupo.durationSec ? `${grupo.durationSec}s` : 'Cache';
   }
   renderizarChipsDeFiltro(lista);
+  renderizarListaDeParticipantes(grupo);
 }
 
 function renderizarGrupo() {
