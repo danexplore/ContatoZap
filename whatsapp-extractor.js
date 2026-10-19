@@ -572,6 +572,97 @@ async function getGroupParticipants(client, groupId, options = {}) {
 }
 
 /**
+ * Foto do grupo: mesmo caminho das fotos dos participantes (ProfilePicThumb.find e depois
+ * requestProfilePicFromServer, 2,5s cada); sem URL, tenta client.getProfilePicUrl (5s).
+ * Devolve a URL, ou null quando o WhatsApp respondeu que o grupo não tem foto.
+ * LANÇA quando não deu para consultar (cliente sem página, página recarregando, erro no evaluate,
+ * prazo estourado sem resposta definitiva): quem chama não deve guardar isso como "sem foto".
+ */
+const PRAZO_FALLBACK_FOTO_MS = 5000;
+const PRAZO_FALLBACK_ESTOUROU = Symbol('prazo-fallback-foto');
+
+async function getGroupPhoto(client, groupId) {
+  if (!groupId) return null;
+  if (!client || !client.pupPage) throw new Error('Cliente WhatsApp ainda não está pronto.');
+  await ensureInjectedPatches(client);
+  const { url, incerto } = await client.pupPage.evaluate(async (gid) => {
+    // incerto: algum passo estourou o prazo ou falhou, então a ausência de URL não prova "sem foto"
+    let incerto = false;
+    const getModule = (name) => {
+      try {
+        return window.require ? window.require(name) : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    const getPhotoFromModel = (m) => {
+      if (!m) return '';
+      return m.eurl || m.img || m.imgFull || '';
+    };
+    // Recebe uma função: um erro síncrono dentro dela também vira "incerto" e não pula os passos seguintes
+    const withTimeout = (fn) =>
+      Promise.race([
+        Promise.resolve().then(fn),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+      ]).catch(() => {
+        incerto = true;
+        return null;
+      });
+
+    const collections = getModule('WAWebCollections') || window.Store;
+    const widFactory = getModule('WAWebWidFactory');
+    const pptCollection = collections
+      ? collections.ProfilePicThumb || collections.WAWebProfilePicThumbCollection
+      : null;
+    const pptBridge = getModule('WAWebContactProfilePicThumbBridge');
+    const chatCollection = collections ? collections.Chat : null;
+
+    let wid = gid;
+    if (widFactory && widFactory.createWid) {
+      try {
+        wid = widFactory.createWid(gid);
+      } catch (_) {}
+    }
+
+    if (pptCollection && pptCollection.find) {
+      const found = getPhotoFromModel(await withTimeout(() => pptCollection.find(wid)));
+      if (found) return { url: found, incerto };
+    }
+
+    if (pptBridge && pptBridge.requestProfilePicFromServer && chatCollection && chatCollection.get) {
+      const chat = (() => {
+        try {
+          return chatCollection.get(wid) || chatCollection.get(gid);
+        } catch (_) {
+          incerto = true;
+          return null;
+        }
+      })();
+      if (chat) {
+        const found = getPhotoFromModel(await withTimeout(() => pptBridge.requestProfilePicFromServer(chat)));
+        if (found) return { url: found, incerto };
+      }
+    }
+
+    return { url: '', incerto };
+  }, groupId);
+  if (url) return url;
+
+  if (typeof client.getProfilePicUrl === 'function') {
+    // Com prazo: uma consulta pendurada prenderia uma das vagas da fila de fotos.
+    // Resposta dele (inclusive "sem foto") é definitiva; prazo estourado ou rejeição é falha.
+    const fallback = await Promise.race([
+      client.getProfilePicUrl(groupId),
+      new Promise((resolve) => setTimeout(() => resolve(PRAZO_FALLBACK_ESTOUROU), PRAZO_FALLBACK_FOTO_MS).unref()),
+    ]);
+    if (fallback === PRAZO_FALLBACK_ESTOUROU) throw new Error('Prazo esgotado ao consultar a foto do grupo.');
+    return typeof fallback === 'string' && fallback ? fallback : null;
+  }
+  if (incerto) throw new Error('Não foi possível consultar a foto do grupo.');
+  return null;
+}
+
+/**
  * Gera string CSV com BOM UTF-8 e formato compatível com Excel no Brasil
  */
 function generateCsv(participants) {
@@ -608,6 +699,7 @@ function saveGroupCsv(groupName, participants, outputDir = process.cwd()) {
 module.exports = {
   listGroups,
   getGroupParticipants,
+  getGroupPhoto,
   generateCsv,
   saveGroupCsv,
   sanitizeFilename,

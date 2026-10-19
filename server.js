@@ -6,8 +6,12 @@ const { exec, execFile } = require('child_process');
 const QRCode = require('qrcode');
 const { Client, RemoteAuth } = require('whatsapp-web.js');
 const { SqliteStore } = require('./sqlite-store');
-const { listGroups, getGroupParticipants } = require('./whatsapp-extractor');
+const { listGroups, getGroupParticipants, getGroupPhoto } = require('./whatsapp-extractor');
 const log = require('./logger');
+const { RAIZ_PUBLICA, servirArquivoPublico } = require('./lib/estaticos');
+const { urlLocal } = require('./lib/url-local');
+const { criarCacheFotos, lerIdsFotos } = require('./lib/fotos-grupos');
+const { lerCacheParticipantes, gruposDoContato } = require('./lib/cache-participantes');
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = process.env.HOST || '127.0.0.1'; // apenas local
@@ -116,6 +120,7 @@ let client = null;
 let loadingGroups = false;
 let clientReady = false;
 const participantsCache = new Map(); // id -> { data, timestamp }
+const cacheFotos = criarCacheFotos({ buscar: (id) => getGroupPhoto(client, id) });
 const sseClients = new Set();
 let currentBatch = null; // { cancelRequested: boolean }
 
@@ -479,18 +484,10 @@ async function getParticipants(id, forceRefresh = false, fetchPhotos = false) {
 
   const cacheKey = `${id}:${fetchPhotos ? 'with_photos' : 'basic'}`;
   if (!forceRefresh) {
-    if (participantsCache.has(cacheKey)) {
-      const entry = participantsCache.get(cacheKey);
-      if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
-        log.info('CACHE', `Retornando participantes do cache em memória para o grupo ${id}`);
-        return entry.data;
-      }
-    } else if (!fetchPhotos && participantsCache.has(`${id}:with_photos`)) {
-      const entry = participantsCache.get(`${id}:with_photos`);
-      if (Date.now() - entry.timestamp < 5 * 60 * 1000) {
-        log.info('CACHE', `Retornando participantes (com fotos em cache) para o grupo ${id}`);
-        return entry.data;
-      }
+    const emCache = lerCacheParticipantes(participantsCache, id, fetchPhotos, Date.now());
+    if (emCache) {
+      log.info('CACHE', `Retornando participantes do cache em memória para o grupo ${id}`);
+      return emCache;
     }
   }
 
@@ -522,7 +519,12 @@ function sendJson(res, code, data) {
 
 const server = http.createServer(async (req, res) => {
   const startAt = Date.now();
-  const url = new URL(req.url, 'http://localhost');
+  const url = urlLocal(req.url);
+  if (!url) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end('Requisição inválida');
+    return;
+  }
 
   const logDone = (status) => {
     log.http(req.method, url.pathname, status, Date.now() - startAt);
@@ -530,7 +532,7 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (req.method === 'GET' && url.pathname === '/') {
-      const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+      const html = fs.readFileSync(path.join(RAIZ_PUBLICA, 'index.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html);
       return logDone(200);
@@ -607,7 +609,8 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/api/clear-cache') {
       participantsCache.clear();
-      log.info('CACHE', 'Cache de participantes limpo por solicitação do usuário.');
+      cacheFotos.limpar();
+      log.info('CACHE', 'Cache de participantes e de fotos dos grupos limpo por solicitação do usuário.');
       sendJson(res, 200, { ok: true, message: 'Cache limpo com sucesso.' });
       return logDone(200);
     }
@@ -624,6 +627,39 @@ const server = http.createServer(async (req, res) => {
       log.info('API', 'Recebida solicitação de reiniciar conexão do WhatsApp');
       startClient();
       sendJson(res, 200, { ok: true });
+      return logDone(200);
+    }
+
+    if (req.method === 'GET' && (url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/'))) {
+      await servirArquivoPublico(res, RAIZ_PUBLICA, url.pathname);
+      return logDone(res.statusCode);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/contact-groups') {
+      const phone = url.searchParams.get('phone') ?? '';
+      const id = url.searchParams.get('id') ?? '';
+      const exclude = url.searchParams.get('exclude') ?? '';
+      if (!phone && !id) {
+        sendJson(res, 400, { error: 'Informe phone ou id.' });
+        return logDone(400);
+      }
+      const resultado = gruposDoContato(participantsCache, { phone, id, exclude: exclude || undefined });
+      sendJson(res, 200, resultado);
+      return logDone(200);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/group-photos') {
+      if (!client || state.status !== 'ready') {
+        sendJson(res, 503, { error: 'O WhatsApp ainda não está conectado.' });
+        return logDone(503);
+      }
+      const lidos = lerIdsFotos(url.searchParams.get('ids'));
+      if (lidos.erro) {
+        sendJson(res, 400, { error: lidos.erro });
+        return logDone(400);
+      }
+      // Ids que não puderam ser consultados ficam fora do objeto (o front tenta de novo); null = grupo sem foto
+      sendJson(res, 200, await cacheFotos.obter(lidos.ids));
       return logDone(200);
     }
 

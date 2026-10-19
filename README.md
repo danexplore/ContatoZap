@@ -23,7 +23,7 @@ Uma ferramenta completa, visual, rápida e fácil de usar para extrair contatos 
   - Leitura do QR Code diretamente no navegador.
   - Busca instantânea e listagem de todos os grupos com contagem de membros.
   - Cronômetro e indicador de progresso em tempo real durante a extração.
-  - Tabela organizada com paginação e busca por nome ou número.
+  - Lista completa ou grade de participantes, com filtros e busca por nome ou número.
   - Exportação com 1 clique para **Excel (.xls)**, **CSV** (otimizado para Excel e Google Planilhas) e **JSON**.
   - Botão de cópia rápida de todos os números.
 - **⚡ Modo Terminal (CLI):** Opção rápida para quem prefere rodar direto pelo console com menu interativo.
@@ -141,9 +141,21 @@ O WhatsApp respeita estritamente as preferências de privacidade de cada usuári
 - [Node.js](https://nodejs.org/)
 - [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js/)
 - [SQLite Nativo (`node:sqlite`)](https://nodejs.org/api/sqlite.html)
-- HTML5 / CSS3 Moderno com Glassmorphism / JavaScript Vanilla
+- HTML5 / CSS3 com temas claro e escuro / módulos JavaScript nativos
 
 ---
+
+## Estrutura e testes
+
+- `public/`: HTML, estilos e módulos JavaScript da interface; sem etapa de build.
+- `public/js/logica/`: funções puras de busca, filtros e preferências.
+- `public/js/componentes/`: componentes da interface.
+- `lib/`: arquivos estáticos e caches do servidor.
+- `test/front/` e `test/servidor/`: testes com `node:test`.
+
+Execute `npm test` para verificar a suíte. Para conferir a interface, use `npm run watch` e abra `http://localhost:3000`.
+
+A interface oferece grupos fixados e recentes, busca rápida com Ctrl+K (⌘K no Mac), lista ou grade com tamanhos P/M/G e ficha do participante. Na ficha, ↑/↓ percorrem os participantes filtrados e Esc fecha. A seção “Também está em” consulta somente grupos já extraídos nesta execução.
 
 ## ⚖️ Termos de Uso e Responsabilidade (Disclaimer)
 

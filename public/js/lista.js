@@ -1,0 +1,229 @@
+// Tabela de participantes do grupo aberto: filtro por abas, busca, ordenação, paginação e coluna Foto.
+import { $, ICONES, copiarTexto, abrirPreviewFoto } from './ui.js';
+import { aoMudar, atualizarVisao, obterEstado, visaoDoGrupo } from './estado.js';
+import { criarAvatar } from './componentes/avatar.js';
+import { obterGrupoAtivo } from './grupo.js';
+import { apenasDigitos, formatarTelefone } from './logica/texto.js';
+import { filtrarParticipantes, linhaExportacao, ordenarParticipantes } from './logica/filtros.js';
+
+// Mesmas colunas do Excel, mais # e Foto
+const COLUNAS_TABELA = 7;
+
+const CHAVES_LISTA = ['abaAtiva', 'grupos', 'visoes'];
+
+// Paginação é só desta tabela; filtro, busca e ordenação ficam na visão do grupo (estado.js).
+let paginaAtual = 1;
+let tamanhoPagina = 50;
+// Página de cada aba, para voltar a ela ao trocar de aba
+const paginaPorAba = new Map();
+let ultimaAba = null;
+// Filtro + busca da última renderização: se mudar na mesma aba, volta à primeira página
+let ultimaConsulta = '';
+
+function criarCelulaTexto(texto) {
+  const td = document.createElement('td');
+  td.textContent = texto || '—';
+  return td;
+}
+
+function criarSelo(texto, variante) {
+  const selo = document.createElement('span');
+  selo.className = `tag-badge ${variante}`;
+  selo.textContent = texto;
+  return selo;
+}
+
+function membrosFiltradosEOrdenados(visao) {
+  const grupo = obterGrupoAtivo();
+  if (!grupo || !grupo.participants) return [];
+  const filtrados = filtrarParticipantes(grupo.participants, { filtro: visao.filtro, busca: visao.busca });
+  return ordenarParticipantes(filtrados, visao.ordenacao.coluna, visao.ordenacao.asc);
+}
+
+function criarCelulaFoto(p) {
+  const td = document.createElement('td');
+  td.className = 'photo-cell';
+  const nomeExibido = p.pushname || p.name || '';
+  const avatar = criarAvatar({ id: p.id, nome: nomeExibido, foto: p.photoUrl || null, tamanho: 'preencher' });
+  const moldura = document.createElement('span');
+  moldura.className = 'member-avatar';
+  moldura.appendChild(avatar);
+  if (p.photoUrl) {
+    // Só amplia enquanto a foto existe; se ela falhar, o avatar tira a classe e ficam as iniciais
+    const comFoto = () => avatar.classList.contains('avatar--com-foto');
+    moldura.title = 'Clique para ver a foto ampliada';
+    moldura.addEventListener('mouseenter', () => { moldura.title = comFoto() ? 'Clique para ver a foto ampliada' : ''; });
+    moldura.addEventListener('click', (e) => {
+      if (!comFoto()) return;
+      e.stopPropagation();
+      abrirPreviewFoto(p.photoUrl, nomeExibido);
+    });
+  }
+  td.appendChild(moldura);
+  return td;
+}
+
+function criarCelulaTelefone(p) {
+  const td = document.createElement('td');
+  const envoltorio = document.createElement('div');
+  envoltorio.className = 'phone-cell';
+  const texto = document.createElement('span');
+  texto.textContent = p.phone ? formatarTelefone(p.phone) : '—';
+  envoltorio.appendChild(texto);
+  if (p.phone) {
+    const botao = document.createElement('button');
+    botao.className = 'copy-icon-btn';
+    botao.title = 'Copiar telefone';
+    botao.setAttribute('aria-label', `Copiar telefone ${formatarTelefone(p.phone)}`);
+    botao.innerHTML = ICONES.copy;
+    botao.addEventListener('click', (e) => { e.stopPropagation(); copiarTexto(apenasDigitos(p.phone), 'Telefone copiado!'); });
+    envoltorio.appendChild(botao);
+  }
+  td.appendChild(envoltorio);
+  return td;
+}
+
+// Abas de filtro, campo de busca e setas de ordenação refletem a visão do grupo aberto.
+function sincronizarControles(visao) {
+  document.querySelectorAll('.filter-tab').forEach((botao) => {
+    const ativo = botao.dataset.filter === visao.filtro;
+    botao.classList.toggle('active', ativo);
+    botao.setAttribute('aria-selected', ativo ? 'true' : 'false');
+  });
+  const busca = $('memberSearch');
+  if (busca.value.trim() !== visao.busca) busca.value = visao.busca;
+  atualizarIconesOrdem(visao.ordenacao);
+}
+
+function renderizarLista({ primeiraPagina = false } = {}) {
+  const { abaAtiva } = obterEstado();
+  const visao = visaoDoGrupo(abaAtiva);
+  const consulta = JSON.stringify([visao.filtro, visao.busca]);
+  // Enquanto o grupo carrega não há páginas: a da aba só é lida e gravada com ele pronto
+  const pronto = Boolean(obterGrupoAtivo());
+  if (pronto && abaAtiva !== ultimaAba) paginaAtual = paginaPorAba.get(abaAtiva) || 1;
+  else if (primeiraPagina || consulta !== ultimaConsulta) paginaAtual = 1;
+  if (pronto) ultimaAba = abaAtiva;
+  ultimaConsulta = consulta;
+  sincronizarControles(visao);
+  const lista = membrosFiltradosEOrdenados(visao);
+  const tbody = $('membersTbody');
+  tbody.replaceChildren();
+  const total = lista.length;
+  $('pageTotalText').textContent = total;
+  const limite = tamanhoPagina === 'all' ? total : parseInt(tamanhoPagina, 10);
+  const totalPaginas = Math.max(1, Math.ceil(total / (limite || 1)));
+  if (pronto) {
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    paginaPorAba.set(abaAtiva, paginaAtual);
+    // Abas fechadas não guardam página
+    for (const id of paginaPorAba.keys()) if (!obterEstado().recentes.some((r) => r.id === id)) paginaPorAba.delete(id);
+  }
+  const inicio = (paginaAtual - 1) * limite;
+  const fim = Math.min(inicio + limite, total);
+  $('pageShowingText').textContent = total === 0 ? '0-0' : `${inicio + 1}-${fim}`;
+  $('pageCurrentLabel').textContent = `${paginaAtual} / ${totalPaginas}`;
+  $('prevPageBtn').disabled = paginaAtual <= 1;
+  $('nextPageBtn').disabled = paginaAtual >= totalPaginas;
+  const itensPagina = lista.slice(inicio, fim);
+  if (!itensPagina.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = COLUNAS_TABELA;
+    td.style.textAlign = 'center';
+    td.style.padding = 'var(--space-6)';
+    td.style.color = 'hsl(var(--color-text-tertiary))';
+    td.textContent = 'Nenhum contato corresponde aos filtros aplicados.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+  itensPagina.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    const tdIndice = document.createElement('td');
+    tdIndice.style.color = 'hsl(var(--color-text-tertiary))';
+    tdIndice.textContent = inicio + idx + 1;
+    const excel = linhaExportacao(p);
+    const tdNomeWhatsapp = criarCelulaTexto(excel.nome_whatsapp);
+    tdNomeWhatsapp.style.fontWeight = '500';
+    const tdNomeAgenda = criarCelulaTexto(excel.nome_agenda);
+    const tdAdmin = document.createElement('td');
+    tdAdmin.appendChild(criarSelo(excel.admin, p.admin ? 'admin' : 'member'));
+    const tdStatus = document.createElement('td');
+    tdStatus.appendChild(criarSelo(excel.status, p.hidden ? 'lid' : 'member'));
+    tr.append(tdIndice, criarCelulaFoto(p), tdNomeWhatsapp, tdNomeAgenda, criarCelulaTelefone(p), tdAdmin, tdStatus);
+    tbody.appendChild(tr);
+  });
+}
+
+function atualizarIconesOrdem({ coluna, asc }) {
+  document.querySelectorAll('th.sortable').forEach((th) => {
+    const ativa = th.dataset.sort === coluna;
+    th.querySelector('.sort-icon').textContent = ativa ? (asc ? '▲' : '▼') : '';
+    th.setAttribute('aria-sort', ativa ? (asc ? 'ascending' : 'descending') : 'none');
+  });
+}
+
+function atualizarVisaoAtiva(patch) {
+  const { abaAtiva } = obterEstado();
+  if (abaAtiva) atualizarVisao(abaAtiva, patch);
+}
+
+export function iniciarLista() {
+  aoMudar((_, chaves) => { if (chaves.some((c) => CHAVES_LISTA.includes(c))) renderizarLista(); });
+
+  document.querySelectorAll('.filter-tab').forEach((botao) => {
+    botao.addEventListener('click', () => atualizarVisaoAtiva({ filtro: botao.dataset.filter }));
+  });
+
+  $('memberSearch').addEventListener('input', (e) => atualizarVisaoAtiva({ busca: e.target.value.trim() }));
+
+  document.querySelectorAll('th.sortable').forEach((th) => {
+    th.addEventListener('click', () => {
+      const coluna = th.dataset.sort;
+      const atual = visaoDoGrupo(obterEstado().abaAtiva).ordenacao;
+      // Crescente → decrescente → ordem original (a do Excel)
+      let ordenacao;
+      if (atual.coluna !== coluna) ordenacao = { coluna, asc: true };
+      else if (atual.asc) ordenacao = { coluna, asc: false };
+      else ordenacao = { coluna: null, asc: true };
+      atualizarVisaoAtiva({ ordenacao });
+    });
+  });
+
+  $('pageSizeSelect').addEventListener('change', (e) => { tamanhoPagina = e.target.value; renderizarLista({ primeiraPagina: true }); });
+  $('prevPageBtn').addEventListener('click', () => { if (paginaAtual > 1) { paginaAtual--; renderizarLista(); } });
+  $('nextPageBtn').addEventListener('click', () => { paginaAtual++; renderizarLista(); });
+}
+
+export function ativarRedimensionamentoFoto() {
+  const alca = $('photoResizeHandle');
+  const th = $('thPhoto');
+  if (!alca || !th) return;
+  const tabela = th.closest('table');
+  const paddingCelula = 16; // padding-inline de td.photo-cell (2 × --space-2)
+  const AVATAR_MINIMO = 28;
+  alca.addEventListener('click', (e) => e.stopPropagation());
+  alca.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const xInicial = e.pageX;
+    const larguraInicial = th.offsetWidth;
+    alca.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const aoMover = (ev) => {
+      const avatar = Math.max(AVATAR_MINIMO, larguraInicial + ev.pageX - xInicial - paddingCelula);
+      tabela.style.setProperty('--photo-avatar-size', `${avatar}px`);
+    };
+    const aoSoltar = () => {
+      alca.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', aoMover);
+      document.removeEventListener('mouseup', aoSoltar);
+    };
+    document.addEventListener('mousemove', aoMover);
+    document.addEventListener('mouseup', aoSoltar);
+  });
+}

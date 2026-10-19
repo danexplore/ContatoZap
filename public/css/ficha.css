@@ -1,0 +1,317 @@
+/* ========== FICHA DO PARTICIPANTE ========== */
+/* Container da ficha: vazio quando fechada; ≥1280px divide a tela, <1280px é gaveta por cima. */
+#fichaContainer {
+  display: contents;
+}
+#fichaContainer[hidden] {
+  display: none;
+}
+
+.painel-envoltorio {
+  display: contents;
+}
+
+/* Fundo escuro da gaveta: só visível abaixo de 1280px */
+.painel-fundo {
+  display: none;
+}
+
+.painel {
+  background: hsl(var(--color-bg-primary));
+  border-left: 1px solid hsl(var(--color-border-default));
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.painel-cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid hsl(var(--color-border-default));
+  position: sticky;
+  top: 0;
+  background: hsl(var(--color-bg-primary));
+  z-index: 1;
+}
+
+.painel-titulo {
+  font: var(--text-h3);
+  color: hsl(var(--color-text-primary));
+  margin: 0;
+}
+
+.painel-fechar {
+  flex-shrink: 0;
+}
+
+.painel-corpo {
+  padding: var(--space-5);
+}
+
+/* Conteúdo da ficha */
+.ficha-conteudo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ficha-foto-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.ficha-nomes {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ficha-nome-whatsapp {
+  font: var(--text-h2);
+  color: hsl(var(--color-text-primary));
+  margin: 0;
+  word-break: break-word;
+}
+
+.ficha-nome-agenda {
+  font: var(--text-body-sm);
+  color: hsl(var(--color-text-secondary));
+  margin: 0;
+  word-break: break-word;
+}
+
+.ficha-telefone {
+  font: var(--text-mono);
+  font-size: 1rem;
+  color: hsl(var(--color-text-primary));
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.ficha-etiquetas {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ficha-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font: var(--text-caption);
+  font-weight: 600;
+}
+
+.ficha-etiqueta.admin {
+  background: hsl(var(--color-primary-subtle));
+  color: hsl(var(--color-primary));
+}
+
+.ficha-etiqueta.privado {
+  background: hsl(var(--color-warning-subtle));
+  color: hsl(var(--color-warning));
+}
+
+.ficha-acoes {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.ficha-acoes .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ficha-acoes .btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Seção "Também está em" */
+.ficha-grupos-secao {
+  width: 100%;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid hsl(var(--color-border-default));
+}
+
+.ficha-grupos-titulo {
+  font: var(--text-body-sm);
+  font-weight: 600;
+  color: hsl(var(--color-text-secondary));
+  margin: 0 0 var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ficha-grupos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ficha-grupo-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: hsl(var(--color-text-primary));
+  font: var(--text-body-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color 80ms ease-out;
+}
+
+.ficha-grupo-item:hover {
+  background: hsl(var(--color-bg-tertiary));
+}
+
+.ficha-grupo-item:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.ficha-grupo-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ficha-grupos-vazio {
+  font: var(--text-body-sm);
+  color: hsl(var(--color-text-tertiary));
+  margin: 0;
+  padding: var(--space-3) 0;
+}
+
+/* Esqueleto de carregamento dos grupos em comum */
+.ficha-grupo-item.esqueleto {
+  pointer-events: none;
+}
+
+.ficha-grupo-item.esqueleto .esqueleto-linha {
+  flex: 1;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: hsl(var(--color-bg-tertiary));
+  animation: pulso 1.5s ease-in-out infinite;
+}
+
+@keyframes pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ========== LAYOUT DA FICHA POR BREAKPOINT ========== */
+
+/* ≥1280px: ficha divide a tela ao lado do conteúdo */
+@media (min-width: 1280px) {
+  .grid-layout.com-ficha {
+    grid-template-columns: var(--sidebar-largura) minmax(0, 1fr) 360px;
+  }
+  .grid-layout.layout--trilho.com-ficha {
+    grid-template-columns: var(--trilho-largura) minmax(0, 1fr) 360px;
+  }
+
+  .painel-envoltorio {
+    display: block;
+    position: relative;
+  }
+
+  .painel {
+    position: sticky;
+    top: 56px; /* altura do header */
+    height: calc(100vh - 56px);
+    border-left: 1px solid hsl(var(--color-border-default));
+    border-radius: 0;
+  }
+}
+
+/* <1280px: ficha como gaveta por cima com fundo escuro */
+@media (max-width: 1279px) {
+  .painel-envoltorio {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+  }
+
+  .painel-fundo {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: var(--color-overlay);
+  }
+
+  .painel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    max-width: 85vw;
+    box-shadow: var(--shadow-lg);
+    animation: gavetaEntrar 200ms ease-out;
+  }
+
+  @keyframes gavetaEntrar {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+}
+
+/* <768px: ficha em tela cheia */
+@media (max-width: 767px) {
+  .painel {
+    width: 100%;
+    max-width: 100vw;
+  }
+}
+
+/* Alvos de toque */
+@media (pointer: coarse) {
+  .painel-fechar {
+    min-width: var(--alvo-toque);
+    min-height: var(--alvo-toque);
+  }
+
+  .ficha-grupo-item {
+    min-height: var(--alvo-toque);
+  }
+
+  .ficha-acoes .btn {
+    min-height: var(--alvo-toque);
+  }
+}
+
+/* prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .painel {
+    animation: none;
+  }
+
+  .ficha-grupo-item.esqueleto .esqueleto-linha {
+    animation: none;
+  }
+
+  .ficha-grupo-item {
+    transition: none;
+  }
+}

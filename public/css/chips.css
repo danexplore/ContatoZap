@@ -1,0 +1,69 @@
+/* Chips de filtro clicáveis com contagem */
+.filter-chips {
+ display: flex;
+ flex-wrap: wrap;
+ gap: var(--space-2);
+ margin-top: var(--space-3);
+}
+
+.chip-filtro {
+ display: inline-flex;
+ align-items: center;
+ gap: var(--space-1);
+ padding: var(--space-1) var(--space-3);
+ border: 1px solid hsl(var(--color-border-default));
+ border-radius: var(--radius-full, 999px);
+ background: hsl(var(--color-bg-primary));
+ color: hsl(var(--color-text-secondary));
+ font: var(--text-body-sm);
+ cursor: pointer;
+ transition: background 0.15s, border-color 0.15s, color 0.15s;
+ min-height: 32px;
+}
+
+.chip-filtro:hover {
+ border-color: hsl(var(--color-primary));
+ color: hsl(var(--color-text-primary));
+}
+
+.chip-filtro:focus-visible {
+ outline: 2px solid hsl(var(--color-primary));
+ outline-offset: 2px;
+}
+
+.chip-filtro.ativo {
+ background: hsl(var(--color-primary-subtle));
+ border-color: hsl(var(--color-primary));
+ color: hsl(var(--color-primary));
+ font-weight: 600;
+}
+
+.chip-rotulo {
+ white-space: nowrap;
+}
+
+.chip-contagem {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ min-width: 1.4em;
+ padding: 0 var(--space-1);
+ border-radius: var(--radius-full, 999px);
+ background: hsl(var(--color-border-default));
+ color: hsl(var(--color-text-secondary));
+ font-size: 0.85em;
+ font-weight: 600;
+ line-height: 1.4;
+}
+
+.chip-filtro.ativo .chip-contagem {
+ background: hsl(var(--color-primary));
+ color: #fff;
+}
+
+@media (pointer: coarse) {
+ .chip-filtro {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+ }
+}
