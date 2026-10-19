@@ -1,4 +1,5 @@
 // Sidebar de grupos: filtro, seções Fixados e Todos (recolhíveis), fotos dos grupos e seleção para lote.
+// ≥1024px fica fixa ao lado (ou recolhida no trilho de avatares); abaixo disso abre como gaveta pelo ☰.
 import { $, mostrarAviso } from './ui.js';
 import { iniciarLote, recarregarGrupos } from './api.js';
 import { aoMudar, atualizarEstado, obterEstado } from './estado.js';
@@ -10,8 +11,11 @@ import { criarEstrela } from './componentes/estrela.js';
 import { observarFotoGrupo } from './fotos-grupos.js';
 
 // Mudam o que aparece na lista: redesenho completo. Seleção e fotos só ajustam o que já está na tela.
-const CHAVES_REDESENHO = ['conexao', 'abaAtiva', 'fixados', 'secoes'];
+const CHAVES_REDESENHO = ['conexao', 'abaAtiva', 'fixados', 'secoes', 'sidebarRecolhida'];
 const TAMANHO_AVATAR = 32;
+const CONSULTA_GAVETA = '(max-width: 1023px)';
+
+let gavetaAberta = false;
 
 const SECOES = {
   fixados: { titulo: 'secaoFixadosTitulo', corpo: 'secaoFixadosCorpo', contador: 'secaoFixadosContador' },
@@ -45,7 +49,17 @@ function criarItem(g, secao) {
   const li = document.createElement('li');
   li.className = `group-item${ativo ? ' active' : ''}${fixado ? ' fixado' : ''}`;
   li.dataset.grupo = g.id;
-  li.addEventListener('click', () => abrirGrupo(g));
+  li.addEventListener('click', () => abrirDaSidebar(g));
+
+  // Estilo Gmail: o avatar vira caixa de seleção no hover/foco, e todos viram quando há seleção
+  const marca = document.createElement('label');
+  marca.className = 'group-marca';
+  marca.addEventListener('click', (e) => e.stopPropagation());
+
+  const slotAvatar = document.createElement('span');
+  slotAvatar.className = 'group-avatar';
+  slotAvatar.dataset.avatarGrupo = g.id;
+  slotAvatar.appendChild(criarAvatarDoGrupo(g));
 
   const caixa = document.createElement('input');
   caixa.type = 'checkbox';
@@ -53,13 +67,9 @@ function criarItem(g, secao) {
   caixa.dataset.grupo = g.id;
   caixa.dataset.foco = `${secao}:caixa:${g.id}`;
   caixa.setAttribute('aria-label', `Selecionar ${nome}`);
-  caixa.addEventListener('click', (e) => e.stopPropagation());
   caixa.addEventListener('change', () => alternarSelecao(g.id, caixa.checked));
 
-  const slotAvatar = document.createElement('span');
-  slotAvatar.className = 'group-avatar';
-  slotAvatar.dataset.avatarGrupo = g.id;
-  slotAvatar.appendChild(criarAvatarDoGrupo(g));
+  marca.append(slotAvatar, caixa);
 
   // O botão dá o Enter e o foco por teclado; o clique dele sobe para o item
   const abrir = document.createElement('button');
@@ -82,7 +92,7 @@ function criarItem(g, secao) {
   const estrela = criarEstrela({ ativa: fixado, rotulo: nome, aoAlternar: () => alternarFixado(g.id) });
   estrela.dataset.foco = `${secao}:estrela:${g.id}`;
 
-  li.append(caixa, slotAvatar, abrir, estrela);
+  li.append(marca, abrir, estrela);
   observarFotoGrupo(li, g.id);
   return li;
 }
@@ -111,6 +121,49 @@ function renderizarSecao(chave, grupos, textoVazio) {
   for (const g of grupos) corpo.appendChild(criarItem(g, chave));
 }
 
+function criarItemTrilho(g) {
+  const ativo = obterEstado().abaAtiva === g.id;
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = `trilho-item${ativo ? ' ativo' : ''}`;
+  botao.title = nomeDoGrupo(g);
+  botao.setAttribute('aria-label', nomeDoGrupo(g));
+  if (ativo) botao.setAttribute('aria-current', 'true');
+  botao.dataset.foco = `trilho:abrir:${g.id}`;
+  botao.dataset.avatarGrupo = g.id;
+  botao.appendChild(criarAvatarDoGrupo(g));
+  botao.addEventListener('click', () => abrirGrupo(g));
+  observarFotoGrupo(botao, g.id);
+  return botao;
+}
+
+// Trilho: fixados primeiro, divisor e os demais. Ignora o filtro (só há avatares).
+function renderizarTrilho() {
+  const trilho = $('trilhoLista');
+  if (!obterEstado().sidebarRecolhida) {
+    trilho.replaceChildren();
+    return;
+  }
+  const grupos = gruposDoServidor();
+  const fixados = separarSecoes(grupos, obterEstado().fixados).fixados;
+  const idsFixados = new Set(fixados.map((g) => g.id));
+  const demais = grupos.filter((g) => !idsFixados.has(g.id));
+  const itens = fixados.map(criarItemTrilho);
+  if (fixados.length && demais.length) {
+    const divisor = document.createElement('hr');
+    divisor.className = 'trilho-divisor';
+    itens.push(divisor);
+  }
+  itens.push(...demais.map(criarItemTrilho));
+  trilho.replaceChildren(...itens);
+}
+
+function aplicarRecolhida() {
+  const recolhida = obterEstado().sidebarRecolhida;
+  $('sidebar').classList.toggle('sidebar--recolhida', recolhida);
+  $('mainView').classList.toggle('layout--trilho', recolhida);
+}
+
 // Redesenhar troca os elementos; o foco volta para o equivalente (mesma ação, mesmo grupo).
 function focoAtual() {
   const ativo = document.activeElement;
@@ -119,7 +172,7 @@ function focoAtual() {
 
 function restaurarFoco(chave) {
   if (!chave || focoAtual() === chave) return;
-  const lista = $('groupList');
+  const lista = $('sidebar');
   const alvo = lista.querySelector(`[data-foco="${CSS.escape(chave)}"]`)
     || lista.querySelector(`[data-foco$="${CSS.escape(chave.slice(chave.indexOf(':')))}"]`);
   if (alvo) alvo.focus({ preventScroll: true });
@@ -139,6 +192,8 @@ function renderizarSidebar() {
   renderizarSecao('fixados', secoes.fixados, semFixados ? 'Clique na ☆ para fixar um grupo.' : 'Nenhum fixado com este filtro.');
   renderizarSecao('todos', secoes.todos, comFiltro ? 'Nenhum grupo com este filtro.' : 'Nenhum grupo encontrado.');
   lista.scrollTop = rolagem;
+  aplicarRecolhida();
+  renderizarTrilho();
   restaurarFoco(foco);
   atualizarContadorSelecionados();
 }
@@ -170,6 +225,7 @@ function alternarSelecao(id, marcado) {
 
 function atualizarContadorSelecionados() {
   const total = obterEstado().selecionados.size;
+  $('sidebar').classList.toggle('sidebar--selecionando', total > 0);
   $('selectedCount').textContent = total;
   $('batchSidebarBar').hidden = total === 0;
   $('batchSidebarText').textContent = `${total} grupo(s)`;
@@ -178,6 +234,43 @@ function atualizarContadorSelecionados() {
 function alternarSecao(chave) {
   const secoes = obterEstado().secoes;
   atualizarEstado({ secoes: { ...secoes, [chave]: secoes[chave] === false } });
+}
+
+function alternarRecolhida() {
+  const recolhida = !obterEstado().sidebarRecolhida;
+  atualizarEstado({ sidebarRecolhida: recolhida });
+  $(recolhida ? 'expandirSidebarBtn' : 'recolherSidebarBtn').focus();
+}
+
+const emModoGaveta = () => typeof globalThis.matchMedia === 'function' && globalThis.matchMedia(CONSULTA_GAVETA).matches;
+
+function mostrarGaveta(aberta) {
+  gavetaAberta = aberta;
+  $('sidebar').classList.toggle('sidebar--aberta', aberta);
+  $('sidebarFundo').hidden = !aberta;
+  $('abrirSidebarBtn').setAttribute('aria-expanded', aberta ? 'true' : 'false');
+  $('main-content').inert = aberta;
+}
+
+export function abrirGavetaSidebar() {
+  if (gavetaAberta || !emModoGaveta()) return;
+  mostrarGaveta(true);
+  $('groupSearch').focus();
+}
+
+export function fecharGavetaSidebar() {
+  if (!gavetaAberta) return;
+  mostrarGaveta(false);
+  $('abrirSidebarBtn').focus();
+}
+
+function abrirDaSidebar(g) {
+  fecharGavetaSidebar();
+  abrirGrupo(g);
+}
+
+function atualizarBotaoMenu() {
+  $('abrirSidebarBtn').hidden = obterEstado().conexao.status !== 'ready';
 }
 
 export function atualizarTamanhoGrupo(id, total) {
@@ -197,6 +290,7 @@ function extrairSelecionados() {
 
 export function iniciarSidebar() {
   aoMudar((_, chaves) => {
+    if (chaves.includes('conexao')) atualizarBotaoMenu();
     if (chaves.some((c) => CHAVES_REDESENHO.includes(c))) renderizarSidebar();
     else if (chaves.includes('selecionados')) sincronizarSelecao();
     if (chaves.includes('fotosGrupos')) atualizarFotos();
@@ -204,9 +298,30 @@ export function iniciarSidebar() {
   for (const chave of Object.keys(SECOES)) {
     $(SECOES[chave].titulo).addEventListener('click', () => alternarSecao(chave));
   }
-  $('selectAllBtn').addEventListener('click', () => atualizarEstado({ selecionados: new Set(gruposDoServidor().map((g) => g.id)) }));
+  // Marca os grupos que o filtro mostra, somando aos já marcados
+  $('selectAllBtn').addEventListener('click', () => {
+    const selecionados = new Set(obterEstado().selecionados);
+    for (const g of gruposFiltrados()) selecionados.add(g.id);
+    atualizarEstado({ selecionados });
+  });
   $('clearSelectionBtn').addEventListener('click', () => atualizarEstado({ selecionados: new Set() }));
   $('groupSearch').addEventListener('input', renderizarSidebar);
   $('refreshGroupsBtn').addEventListener('click', () => recarregarGrupos());
   $('startBatchBtn').addEventListener('click', extrairSelecionados);
+
+  $('recolherSidebarBtn').addEventListener('click', alternarRecolhida);
+  $('expandirSidebarBtn').addEventListener('click', alternarRecolhida);
+  $('abrirSidebarBtn').addEventListener('click', abrirGavetaSidebar);
+  $('fecharSidebarBtn').addEventListener('click', fecharGavetaSidebar);
+  $('sidebarFundo').addEventListener('click', fecharGavetaSidebar);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && gavetaAberta) fecharGavetaSidebar();
+  });
+  // Passou para a largura com sidebar fixa: a gaveta deixa de existir, sem mexer no foco
+  if (typeof globalThis.matchMedia === 'function') {
+    const consulta = globalThis.matchMedia(CONSULTA_GAVETA);
+    if (consulta.addEventListener) consulta.addEventListener('change', (e) => { if (!e.matches && gavetaAberta) mostrarGaveta(false); });
+  }
+  atualizarBotaoMenu();
+  aplicarRecolhida();
 }

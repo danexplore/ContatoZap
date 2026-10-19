@@ -1,4 +1,97 @@
 /* ========== SIDEBAR ========== */
+/* ≥1024px: coluna fixa que acompanha a rolagem (ou trilho de 56px). <1024px: gaveta aberta pelo ☰. */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-title-acoes { display: flex; align-items: center; gap: var(--space-1); }
+
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
+    top: calc(56px + var(--space-6));
+    max-height: calc(100vh - 56px - 2 * var(--space-6));
+  }
+  .sidebar-fechar, .sidebar-fundo { display: none; }
+  .sidebar--recolhida > :not(.sidebar-trilho) { display: none; }
+  .sidebar--recolhida .sidebar-trilho { display: flex; }
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(340px, 88vw);
+    z-index: calc(var(--z-overlay) + 1);
+    border-radius: 0;
+    border-width: 0 1px 0 0;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 200ms ease-out, visibility 0s linear 200ms;
+  }
+  .sidebar.sidebar--aberta {
+    transform: none;
+    visibility: visible;
+    transition: transform 200ms ease-out;
+  }
+  .sidebar-recolher { display: none; }
+}
+.sidebar-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--color-overlay);
+}
+
+/* Trilho: só avatares, fixados acima do divisor */
+.sidebar-trilho {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+.trilho-lista {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+  scrollbar-width: none;
+}
+.trilho-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+.trilho-item:hover { border-color: hsl(var(--color-border-strong)); }
+.trilho-item.ativo { border-color: hsl(var(--color-primary)); }
+.trilho-item:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.trilho-divisor {
+  flex-shrink: 0;
+  width: 28px;
+  border: 0;
+  border-top: 1px solid hsl(var(--color-border-strong));
+  margin: var(--space-1) 0;
+}
+
 .sidebar-header {
   padding: var(--space-4);
   border-bottom: 1px solid hsl(var(--color-border-default));
@@ -34,8 +127,8 @@
 
 /* Lista: seções Fixados e Todos */
 .group-list {
-  max-height: calc(100vh - 320px);
-  min-height: 200px;
+  flex: 1 1 auto;
+  min-height: 120px;
   overflow-y: auto;
   padding: var(--space-2);
 }
@@ -126,6 +219,34 @@
 }
 
 .group-avatar { display: inline-flex; flex-shrink: 0; }
+
+/* Seleção estilo Gmail: o avatar dá lugar à caixa no hover/foco, ou em todos quando há seleção */
+.group-marca {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+.group-marca input[type="checkbox"] {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+}
+.group-item:hover .group-marca input,
+.group-item:focus-within .group-marca input,
+.sidebar--selecionando .group-marca input { opacity: 1; }
+.group-item:hover .group-marca .group-avatar,
+.group-item:focus-within .group-marca .group-avatar,
+.sidebar--selecionando .group-marca .group-avatar { visibility: hidden; }
 .group-abrir {
   flex: 1;
   min-width: 0;
@@ -197,10 +318,17 @@
 /* Touch targets (depois de .group-item para vencer na cascata) */
 @media (pointer: coarse) {
   .group-item { min-height: 48px; }
+  .group-marca { width: var(--alvo-toque); height: var(--alvo-toque); }
+  .trilho-item { width: var(--alvo-toque); height: var(--alvo-toque); }
+  /* .btn.icon-only.sm fixa 28px; aqui precisa de especificidade maior */
+  .btn.icon-only.sidebar-recolher,
+  .btn.icon-only.sidebar-fechar,
+  .btn.icon-only.trilho-expandir { width: var(--alvo-toque); }
+  .link-botao { min-height: var(--alvo-toque); }
   .estrela { width: var(--alvo-toque); height: var(--alvo-toque); }
   .sidebar-secao-titulo { min-height: var(--alvo-toque); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .group-item, .estrela, .sidebar-secao-seta { transition: none; }
+  .group-item, .estrela, .sidebar-secao-seta, .sidebar, .sidebar.sidebar--aberta { transition: none; }
 }

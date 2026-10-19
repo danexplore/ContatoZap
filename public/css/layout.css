@@ -34,6 +34,15 @@
   .app-header { padding: 0 var(--space-6); }
 }
 
+.header-inicio { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+/* ☰ só existe enquanto a sidebar é gaveta */
+@media (min-width: 1024px) {
+  .menu-sidebar { display: none; }
+}
+@media (pointer: coarse) {
+  .btn.icon-only.menu-sidebar { width: var(--alvo-toque); }
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -48,7 +57,6 @@
 /* ========== LAYOUT ========== */
 .app-wrap {
   flex: 1;
-  max-width: var(--container-xl);
   width: 100%;
   margin: 0 auto;
   padding: var(--space-5) var(--space-4) var(--space-12);
@@ -64,7 +72,8 @@
   align-items: start;
 }
 @media (min-width: 1024px) {
-  .grid-layout { grid-template-columns: 320px 1fr; }
+  .grid-layout { grid-template-columns: var(--sidebar-largura) minmax(0, 1fr); }
+  .grid-layout.layout--trilho { grid-template-columns: var(--trilho-largura) minmax(0, 1fr); }
 }
 
 /* ========== CARD ========== */
