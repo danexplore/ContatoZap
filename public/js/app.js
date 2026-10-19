@@ -8,6 +8,7 @@ import { iniciarGrupo } from './grupo.js';
 import { ativarRedimensionamentoFoto, iniciarLista } from './lista.js';
 import { iniciarAbas } from './abas.js';
 import { abrirLote, atualizarLote, finalizarLote, iniciarDrawerLote } from './lote.js';
+import { iniciarBuscaRapida } from './busca-rapida.js';
 
 function aplicarTema(tema) {
   const escuro = tema === 'dark';
@@ -33,6 +34,7 @@ iniciarLista();
 iniciarAbas();
 ativarRedimensionamentoFoto();
 iniciarDrawerLote();
+iniciarBuscaRapida();
 
 conectarEventos({
   state: (conexao) => atualizarEstado({ conexao }),
