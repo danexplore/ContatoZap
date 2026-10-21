@@ -324,14 +324,28 @@ async function getGroupParticipants(client, groupId, options = {}) {
     for (const p of list) {
       const wid = p.id || p;
       const serializedId = ser(wid);
-      const isServerLid = serializedId.endsWith('@lid') || (wid && wid.server === 'lid');
+
+            const isServerLid = serializedId.endsWith('@lid') || (wid && wid.server === 'lid');
       const isAdmin = Boolean(p.isAdmin || p.isSuperAdmin);
 
-      // Busca contato APENAS no cache local em memória (síncrono, 0ms)
-      // NUNCA chamar contactCollection.find() que dispara requisições remotas em loop
+      // Busca contato com múltiplas estratégias (cache local, síncrono)
       let contact = null;
-      if (contactCollection && contactCollection.get) {
-        contact = contactCollection.get(wid) || contactCollection.get(serializedId);
+      if (contactCollection) {
+        if (contactCollection.get) {
+          contact = contactCollection.get(wid) || contactCollection.get(serializedId);
+        }
+        if (!contact && contactCollection._map) {
+          contact = contactCollection._map.get(serializedId) || contactCollection._map.get(wid);
+        }
+        if (!contact && contactCollection.models) {
+          const models = contactCollection.getModelsArray
+            ? contactCollection.getModelsArray()
+            : Array.from(contactCollection.models.values ? contactCollection.models.values() : contactCollection.models);
+          for (const m of models) {
+            const mId = ser(m.id);
+            if (mId === serializedId) { contact = m; break; }
+          }
+        }
       }
 
       // 1. Telefone e resolução rápida de LID (100% cache em memória)
@@ -407,21 +421,42 @@ async function getGroupParticipants(client, groupId, options = {}) {
 
       // 3. Extração do Pushname (nome que a pessoa colocou no perfil do WhatsApp)
       const getPush = (ct) => {
-        if (!ct) return '';
-        let res = '';
-        if (contactGetters && contactGetters.getPushname) {
-          try { res = contactGetters.getPushname(ct); } catch (_) {}
-        }
-        return (
-          res ||
-          ct.pushname ||
-          ct.notifyName ||
-          ct.__x_pushname ||
-          ct.__x_notifyName ||
-          ct.verifiedName ||
-          ''
-        );
-      };
+  if (!ct) return '';
+  let res = '';
+
+  // Tenta WAWebContactGetters (API oficial)
+  if (contactGetters) {
+    if (contactGetters.getPushname) {
+      try { res = contactGetters.getPushname(ct); } catch (_) {}
+    }
+    if (!res && contactGetters.getNotifyName) {
+      try { res = contactGetters.getNotifyName(ct); } catch (_) {}
+    }
+    if (!res && contactGetters.getName) {
+      try { res = contactGetters.getName(ct); } catch (_) {}
+    }
+  }
+
+  // Propriedades diretas
+  if (!res) {
+    res = ct.pushname || ct.pushName || ct.notifyName || ct.notifyname ||
+          ct.__x_pushname || ct.__x_pushName || ct.__x_notifyName || ct.__x_notifyname ||
+          ct.verifiedName || ct.displayName || ct.shortName || ct.name || '';
+  }
+
+  // Objetos aninhados
+  if (!res && ct.__x_contact) {
+    res = ct.__x_contact.pushname || ct.__x_contact.notifyName || ct.__x_contact.name || '';
+  }
+  if (!res && ct._contact) {
+    res = ct._contact.pushname || ct._contact.notifyName || ct._contact.name || '';
+  }
+  if (!res && ct.contact) {
+    res = ct.contact.pushname || ct.contact.notifyName || ct.contact.name || '';
+  }
+
+  return String(res || '').trim();
+};
 
       // 4. Extração do Nome Salvo na Agenda (pelo próprio usuário)
       const getSaved = (ct) => {
@@ -433,17 +468,83 @@ async function getGroupParticipants(client, groupId, options = {}) {
         return res || ct.name || '';
       };
 
-      let pushname = getPush(contact) || getPush(phoneContact);
-      let savedName = getSaved(contact) || getSaved(phoneContact);
+      let pushname = '';
+let savedName = '';
 
-      // Checa também se o objeto do participante tem os dados
-      if (!pushname && p) {
-        pushname = p.pushname || p.notifyName || (p.contact && (p.contact.pushname || p.contact.notifyName)) || '';
-      }
-      if (!savedName && p) {
-        savedName = p.name || (p.contact && p.contact.name) || '';
-      }
+// Estratégia 1: Tenta extrair diretamente do objeto participante (mais confiável)
+if (p) {
+  // O objeto Participant do WhatsApp Web tem o nome em várias propriedades
+  pushname = p.pushname || p.pushName || p.notifyName || p.notifyname || '';
 
+  // Se não encontrou, tenta via contact aninhado
+  if (!pushname && p.contact) {
+    pushname = p.contact.pushname || p.contact.pushName || p.contact.notifyName || p.contact.name || '';
+  }
+
+  // Tenta via __x_contact (propriedade interna)
+  if (!pushname && p.__x_contact) {
+    pushname = p.__x_contact.pushname || p.__x_contact.notifyName || p.__x_contact.name || '';
+  }
+}
+
+// Estratégia 2: Tenta via contactCollection (se conseguiu encontrar o contato)
+if (!pushname) {
+  pushname = getPush(contact) || getPush(phoneContact);
+}
+
+// Estratégia 3: Varredura agressiva de todas as propriedades do participante
+if (!pushname && p) {
+  for (const key of Object.keys(p)) {
+    if (key.toLowerCase().includes('name') || key.toLowerCase().includes('push') || key.toLowerCase().includes('notify')) {
+      const val = p[key];
+      if (typeof val === 'string' && val.trim() && val.trim() !== serializedId.split('@')[0] && !/^\d+$/.test(val.trim())) {
+        pushname = val.trim();
+        break;
+      }
+    }
+  }
+}
+
+// Estratégia 4: Prototype chain scan
+if (!pushname && p) {
+  let proto = Object.getPrototypeOf(p);
+  while (proto && proto !== Object.prototype) {
+    for (const key of Object.getOwnPropertyNames(proto)) {
+      if (key.toLowerCase().includes('name') || key.toLowerCase().includes('push')) {
+        try {
+          const val = p[key];
+          if (typeof val === 'string' && val.trim() && val.trim() !== serializedId.split('@')[0]) {
+            pushname = val.trim();
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+    if (pushname) break;
+    proto = Object.getPrototypeOf(proto);
+  }
+}
+
+// Estratégia 5: Getters nativos do participante
+if (!pushname && p) {
+  if (typeof p.getPushname === 'function') {
+    try { pushname = p.getPushname() || ''; } catch (_) {}
+  }
+  if (!pushname && typeof p.getNotifyName === 'function') {
+    try { pushname = p.getNotifyName() || ''; } catch (_) {}
+  }
+  if (!pushname && typeof p.getName === 'function') {
+    try { pushname = p.getName() || ''; } catch (_) {}
+  }
+}
+
+// Extrai savedName (nome da agenda)
+savedName = getSaved(contact) || getSaved(phoneContact);
+if (!savedName && p) {
+  savedName = p.name || (p.contact && p.contact.name) || '';
+}
+      }
+      
       pushname = String(pushname || '').trim();
       savedName = String(savedName || '').trim();
 
@@ -548,11 +649,7 @@ async function getGroupParticipants(client, groupId, options = {}) {
       }
     }
 
-    return {
-      id: gid,
-      name: String(groupName).trim(),
-      participants,
-    };
+        };
   }, groupId, fetchProfilePics);
 
   const durationMs = Date.now() - startTime;
