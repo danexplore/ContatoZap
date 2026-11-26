@@ -85,15 +85,21 @@ export async function montarPlanilha(nomeAba, linhas, comColunaGrupo) {
 
 export async function executarExportacaoExcel(botao, montar) {
   if (typeof ExcelJS === 'undefined') { mostrarAviso('Biblioteca do Excel não carregou. Recarregue a página.', 'error'); return; }
-  const rotulo = botao.textContent;
-  botao.disabled = true;
-  botao.textContent = 'Gerando...';
+  // O menu Exportar não passa botão: o retorno ao usuário vai por aviso
+  if (!botao) mostrarAviso('Gerando Excel...', 'info');
+  const rotulo = botao?.textContent;
+  if (botao) {
+    botao.disabled = true;
+    botao.textContent = 'Gerando...';
+  }
   try {
     await montar();
   } catch (err) {
     mostrarAviso(`Erro ao gerar Excel: ${err.message}`, 'error');
   } finally {
-    botao.textContent = rotulo;
-    botao.disabled = estaSincronizando() && BOTOES_EXPORTACAO.includes(botao.id);
+    if (botao) {
+      botao.textContent = rotulo;
+      botao.disabled = estaSincronizando() && BOTOES_EXPORTACAO.includes(botao.id);
+    }
   }
 }
